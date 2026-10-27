@@ -117,6 +117,25 @@ shell/editor browser cases pass across Chromium, Firefox and Playwright WebKit.
 After the final picker-frame correction, all nine targeted Colors cases pass
 again across those engines. The PR must also pass the complete runtime suite.
 
+## Menu-bar row comparison
+
+Independent pixel probes establish the first-glyph columns of the original
+menu bar: System 2, File 5, Edit 11, Search 17, Run 25, Compile 30, Debug 39,
+Project 46, Options 55, Window 66 and Help 74. The left captions, selection
+regions and pointer targets now follow those cells. The System glyph uses the
+hotkey color. Popup origins remain separate: File's outer blank column is 3,
+its frame is at 4, and item text starts at 6.
+
+The independently transcribed `menu-bar.cells.json` verifies that row's text and
+VGA attributes. The earlier File-menu and Open-dialog whole-screen fixtures
+remain implementation contracts. Neither the single row nor those fixtures
+certifies all menus, glyphs, dialogs or original interaction behavior.
+
+The correction passes local lint, strict typecheck, 50 unit tests and the
+production build. Fifteen browser cases pass across the three engines for the
+reference caption cells, File's pointer boundary, color preferences and native
+720×400/2×/3× scaling. Full PR CI is a separate required gate.
+
 ## Reference comparison still required
 
 Capture original IDE screens privately; the plan excludes Borland screenshots

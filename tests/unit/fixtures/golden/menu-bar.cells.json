@@ -1,0 +1,15 @@
+{
+  "source": "https://turboc.pages.dev",
+  "evidence": "Original File-menu native PNG, 27 Oct 2026. Pixel probes confirm foreground/background colors and glyph columns. Blank-cell foreground follows the menu palette.",
+  "columns": 80,
+  "row": 0,
+  "text": "  ≡  File  Edit  Search  Run  Compile  Debug  Project  Options    Window  Help  ",
+  "attributes": [
+    112, 112, 116, 112, 32, 36, 32, 32, 32, 32, 112, 116, 112, 112, 112, 112, 112, 116, 112, 112,
+    112, 112, 112, 112, 112, 116, 112, 112, 112, 112, 116, 112, 112, 112, 112, 112, 112, 112, 112,
+    116, 112, 112, 112, 112, 112, 112, 116, 112, 112, 112, 112, 112, 112, 112, 112, 116, 112, 112,
+    112, 112, 112, 112, 112, 112, 112, 112, 116, 112, 112, 112, 112, 112, 112, 112, 116, 112, 112,
+    112, 112, 112
+  ],
+  "scope": "Cell text/attributes only; the agreed 9x16 font differs from the emulator 8x16 font."
+}

@@ -24,7 +24,7 @@ const unavailable = (label: string): MenuItem =>
 
 export const menus: Menu[] = [
   {
-    label: '≡',
+    label: '~≡~',
     x: 0,
     items: [
       item('Repaint desktop', 'repaint'),

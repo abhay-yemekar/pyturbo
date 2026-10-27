@@ -220,7 +220,52 @@ test('applies independent symbol and menu colours from the Colors dialog', async
       [x, y, ...expected],
     );
   await expect.poll(() => hasColour(3, 2, [255, 255, 255])).toBe(true);
-  await expect.poll(() => hasColour(5, 0, [0, 0, 170])).toBe(true);
+  await expect.poll(() => hasColour(6, 0, [0, 0, 170])).toBe(true);
+});
+
+test('places reference menu captions on their cells and opens File from its right margin', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 800, height: 500 });
+  await shellReady(page);
+  const canvas = page.getByRole('img', { name: /VGA desktop/ });
+  const atlasResponse = await page.request.get('/fonts/Px437_IBM_VGA_9x16.atlas.json');
+  const atlas = (await atlasResponse.json()) as { glyphs: number[][] };
+  const foregroundMask = (column: number) =>
+    canvas.evaluate((element, x) => {
+      const context = (element as HTMLCanvasElement).getContext('2d');
+      if (!context) throw new Error('Canvas 2D is unavailable');
+      const pixels = context.getImageData(x * 9, 0, 9, 16).data;
+      return Array.from({ length: 144 }, (_, index) =>
+        pixels[index * 4] === 170 && pixels[index * 4 + 1] === 0 && pixels[index * 4 + 2] === 0
+          ? 1
+          : 0,
+      );
+    }, column);
+  for (const [column, code] of [
+    [2, 0xf0],
+    [5, 0x46],
+  ]) {
+    await expect
+      .poll(() => foregroundMask(column))
+      .toEqual(
+        atlas.glyphs[code].flatMap((row) => Array.from({ length: 9 }, (_, x) => (row >> x) & 1)),
+      );
+  }
+  const rect = await canvas.boundingBox();
+  if (!rect) throw new Error('Canvas is missing');
+  await page.mouse.click(rect.x + 9 * 9 + 2, rect.y + 2);
+  await expect
+    .poll(() =>
+      canvas.evaluate((element) => {
+        const context = (element as HTMLCanvasElement).getContext('2d');
+        if (!context) throw new Error('Canvas 2D is unavailable');
+        return [...context.getImageData(9 * 9, 0, 1, 1).data];
+      }),
+    )
+    .toEqual([0, 170, 0, 255]);
+  await page.keyboard.press('n');
+  await expect(page.getByTestId('editor')).toHaveValue('');
 });
 
 test('suppresses dialog shadows in monochrome mode', async ({ page }) => {
