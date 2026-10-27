@@ -67,6 +67,13 @@ Keep `@types/node` on the agreed Node 24 major. CodeQL sub-actions are grouped
 and pinned to the same release commit. Major CI action upgrades have their own
 tracking issues and require the full CI suite before merging.
 
+The browser CI job uses the official Playwright image pinned by digest, with
+browser binaries and Ubuntu libraries already installed. Its version must match
+`@playwright/test` in `package.json`; update the image and package together. Node
+24 and the repository's pnpm pin are still selected explicitly. See the
+[official Docker guidance](https://playwright.dev/docs/docker). This avoids
+reinstalling browser system libraries from Ubuntu mirrors on every CI run.
+
 ## Implementation expectations
 
 - Preserve the shared character-cell model for windows, editor, overlaps and
