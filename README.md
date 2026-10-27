@@ -13,6 +13,11 @@ production readiness have **not** been certified. The Cloudflare Pages project
 reserves `https://pyturbo.pages.dev`; a successful deployment is still pending.
 See [implementation status](docs/implementation-status.md) for verification limits.
 
+![Current PyTurbo desktop at its native 720 by 400 resolution](docs/images/desktop.png)
+
+This screenshot shows the current implementation. Original-IDE fidelity approval
+and final icon design are still pending.
+
 ## Current implementation
 
 The source includes an 80×25 canvas desktop, VGA cell engine and licensed font
