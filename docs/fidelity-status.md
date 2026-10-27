@@ -151,7 +151,16 @@ The editor uses the host's current body height for these commands, including
 resized and zoomed windows, 43/50-line and Fill layouts. Page selections and
 preferred columns through shorter lines are covered separately. This establishes
 these commands' semantics, not physical browser/OS shortcut capture or the four
-remaining Ctrl+O option behaviors.
+remaining Ctrl+O F/R implementations. PR #30 passed all 144 browser cases, the
+other required checks and its preview. All five production navigation cases pass.
+
+Private Editor Options captures and a separate Backspace probe confirm the
+implemented Ctrl+O T/U meanings: true-tab insertion and leading-whitespace removal
+to a preceding smaller indentation. A 7-column indent returns to a prior 3-column
+indent; with Unindents off, Backspace removes one character. These options and
+Ctrl+O I use the dialog's shared persistent settings, as observed across newly
+created reference editors. Optimal Fill and cursor-inside-tab editing still need
+implementation; their presence in the original dialog is not a completion claim.
 
 ## Reference comparison still required
 

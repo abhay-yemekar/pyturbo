@@ -75,6 +75,8 @@ describe('workspace storage', () => {
     const settings = normalizeSettings({
       rows: 99,
       tabSize: -1,
+      useTabCharacter: 'yes',
+      backspaceUnindents: null,
       screenMode: 'bad',
       pauseAfterRun: 'true',
       colors: { normal: 0x1e, bad: -1 },
@@ -82,6 +84,8 @@ describe('workspace storage', () => {
     });
     expect(settings.rows).toBe(25);
     expect(settings.tabSize).toBe(4);
+    expect(settings.useTabCharacter).toBe(false);
+    expect(settings.backspaceUnindents).toBe(true);
     expect(settings.pauseAfterRun).toBe(false);
     expect(settings.colors).toEqual({ normal: 0x1e });
     settings.arguments.push('hello');

@@ -17,6 +17,8 @@ export interface WorkspaceSettings {
   videoMode: VideoMode;
   tabSize: number;
   autoIndent: boolean;
+  useTabCharacter: boolean;
+  backspaceUnindents: boolean;
   cuaKeys: boolean;
   textMouse: boolean;
   stderrColor: boolean;
@@ -33,6 +35,8 @@ export const defaultSettings: WorkspaceSettings = {
   videoMode: 'color',
   tabSize: 4,
   autoIndent: true,
+  useTabCharacter: false,
+  backspaceUnindents: true,
   cuaKeys: true,
   textMouse: false,
   stderrColor: true,
@@ -91,6 +95,8 @@ export function normalizeSettings(value: unknown): WorkspaceSettings {
   for (const key of [
     'pauseAfterRun',
     'autoIndent',
+    'useTabCharacter',
+    'backspaceUnindents',
     'cuaKeys',
     'textMouse',
     'stderrColor',

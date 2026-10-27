@@ -156,6 +156,74 @@ describe('EditorBuffer', () => {
     expect(buffer.text).toBe('if True:\nprint(1)');
   });
 
+  it('toggles true tabs and uses visual stops after imported tabs and Unicode', () => {
+    const buffer = new EditorBuffer('MAIN.PY', '\t😀');
+    buffer.end();
+    key(buffer, 'Tab');
+    expect(buffer.text).toBe('\t😀   ');
+    key(buffer, 'o', true);
+    key(buffer, 't');
+    expect(buffer.useTabCharacter).toBe(true);
+    expect(buffer.pendingCommand).toBe('editor-options-changed');
+    key(buffer, 'Tab');
+    expect(buffer.text).toBe('\t😀   \t');
+    buffer.undo();
+    expect(buffer.text).toBe('\t😀   ');
+    buffer.setText('a\nb');
+    buffer.selectAll();
+    key(buffer, 'Tab');
+    expect(buffer.text).toBe('\ta\n\tb');
+    key(buffer, 'Tab', false, true);
+    expect(buffer.text).toBe('a\nb');
+  });
+
+  it('backspaces to the previous smaller indentation rather than a fixed tab stop', () => {
+    const buffer = new EditorBuffer('MAIN.PY', '   a\n       b\n\n       ');
+    buffer.end(false, true);
+    const indentStart = buffer.cursor - 7;
+    buffer.bookmarks.set(1, indentStart + 2);
+    key(buffer, 'Backspace');
+    expect(buffer.text).toBe('   a\n       b\n\n   ');
+    expect(buffer.bookmarks.get(1)).toBe(indentStart + 2);
+    buffer.undo();
+    expect(buffer.text).toBe('   a\n       b\n\n       ');
+    key(buffer, 'o', true);
+    key(buffer, 'u');
+    expect(buffer.backspaceUnindents).toBe(false);
+    key(buffer, 'Backspace');
+    expect(buffer.text).toBe('   a\n       b\n\n      ');
+  });
+
+  it('unindents across tab cells without changing the rest of the line', () => {
+    const buffer = new EditorBuffer('MAIN.PY', '   a\n\tvalue');
+    buffer.goto(1, 1);
+    key(buffer, 'Backspace');
+    expect(buffer.text).toBe('   a\n   value');
+    expect(buffer.position).toEqual({ line: 1, col: 3 });
+    buffer.undo();
+    expect(buffer.text).toBe('   a\n\tvalue');
+    buffer.setText('  x');
+    buffer.goto(0, 2);
+    key(buffer, 'Backspace');
+    expect(buffer.text).toBe('x');
+    key(buffer, 'Backspace');
+    expect(buffer.text).toBe('x');
+  });
+
+  it('uses ordinary deletion outside indentation and deletes selected whitespace exactly', () => {
+    const buffer = new EditorBuffer('MAIN.PY', '  a \n       ');
+    buffer.goto(0, 4);
+    key(buffer, 'Backspace');
+    expect(buffer.text).toBe('  a\n       ');
+    buffer.goto(1, 5);
+    buffer.move(-1, 0, true);
+    key(buffer, 'Backspace');
+    expect(buffer.text).toBe('  a\n      ');
+    buffer.goto(1, 0);
+    key(buffer, 'Backspace');
+    expect(buffer.text).toBe('  a      ');
+  });
+
   it('uses overwrite mode without consuming a newline', () => {
     const buffer = new EditorBuffer('MAIN.PY', 'abc\ndef');
     buffer.goto(0, 2);

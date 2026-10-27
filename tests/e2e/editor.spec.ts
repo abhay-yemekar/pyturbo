@@ -52,6 +52,62 @@ test('edits, undoes, redoes and overwrites while Python is still loading', async
   await expect(page.getByTestId('runtime-status')).toContainText('loading');
 });
 
+test('keeps tab and unindent toggles synchronized across editors and reloads', async ({ page }) => {
+  const editor = await open(page);
+  await editor.fill('   a\n       b\n       ');
+  await editor.press('End');
+  await editor.press('Backspace');
+  await expect(editor).toHaveValue('   a\n       b\n   ');
+  await editor.press('Control+z');
+  await expect(editor).toHaveValue('   a\n       b\n       ');
+  await editor.press('Control+o');
+  await editor.press('u');
+  await editor.press('Backspace');
+  await expect(editor).toHaveValue('   a\n       b\n      ');
+  await editor.press('Control+o');
+  await editor.press('t');
+  await editor.press('Control+o');
+  await editor.press('i');
+  await editor.press('F2');
+
+  await command(page, 'New');
+  await editor.press('Tab');
+  await editor.press('Enter');
+  await expect(editor).toHaveValue('\t\n');
+  await editor.press('F2');
+  await page.reload();
+  await expect(editor).toBeAttached();
+  await command(page, 'Editor…');
+  const options = page.getByRole('dialog', { name: 'Editor', exact: true });
+  await expect(options.getByLabel('Use tab character', { exact: true })).toBeChecked();
+  await expect(options.getByLabel('Backspace unindents', { exact: true })).not.toBeChecked();
+  await expect(options.getByLabel('Auto indent', { exact: true })).not.toBeChecked();
+  await expect(options.getByLabel('Tab size (1–16)', { exact: true })).toHaveValue('4');
+  await options.getByRole('button', { name: 'Cancel', exact: true }).press('Enter');
+  await editor.press('F6');
+  await editor.fill('');
+  await editor.press('Tab');
+  await expect(editor).toHaveValue('\t');
+});
+
+test('uses visual tab stops after imported tabs and keeps space-only insertion by default', async ({
+  page,
+}) => {
+  const editor = await open(page);
+  await editor.fill('\t😀');
+  await editor.press('End');
+  await editor.press('Tab');
+  await expect(editor).toHaveValue('\t😀   ');
+  await command(page, 'Editor…');
+  const options = page.getByRole('dialog', { name: 'Editor', exact: true });
+  await expect(options.getByLabel('Use tab character', { exact: true })).not.toBeChecked();
+  await expect(options.getByLabel('Backspace unindents', { exact: true })).toBeChecked();
+  await options.getByLabel('Use tab character', { exact: true }).press('Space');
+  await options.getByRole('button', { name: 'OK', exact: true }).press('Enter');
+  await editor.press('Tab');
+  await expect(editor).toHaveValue('\t😀   \t');
+});
+
 test('keeps backward selections across redraws and replaces the selected text', async ({
   page,
 }) => {

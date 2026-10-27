@@ -97,8 +97,17 @@ Editor viewport navigation now uses the current text-body height for page keys,
 legacy aliases and viewport-boundary shortcuts. Private original-IDE probes verify
 one-row page overlap, matching viewport scrolling and preserved source columns in
 14-row and 7-row editor bodies. Tests also cover resized windows, 43/50-line and
-Fill layouts, selections and file edges. Full PR checks and deployment verification
-remain required for this change.
+Fill layouts, selections and file edges. PR #30 passed all **144 browser cases**,
+the other required checks, CodeQL and Pages and was merged as `5ae78c0`. All five
+production Chromium navigation cases pass on that deployed bundle.
+
+Ctrl+O T/U and matching Editor options now control literal-tab insertion and
+Backspace Unindents. The owner's confirmed defaults retain space-only Tab with
+four-space stops and enable Backspace Unindents. These toggles and Ctrl+O I update
+validated persistent settings across open/new editors. Unit and browser regressions
+cover 3/7-space indentation, imported hard tabs, non-BMP columns, selection deletion,
+undo, settings and reloads. Optimal Fill and Cursor Through Tabs remain open;
+their approved defaults are recorded separately from implementation status.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
@@ -125,7 +134,7 @@ Successful builds and small geometry fixtures do not certify the whole product.
    modes. Commit only PyTurbo screenshots/baselines.
 4. Complete real browser/OS shortcut tests, Safari/iOS and Android checks. The
    owner approved continuing implementation while these checks remain open.
-5. Resolve the four Ctrl+O toggles in
+5. Implement the remaining Ctrl+O F/R options in
    [editor-and-storage.md](editor-and-storage.md).
 6. Verify save failures/conflicts, IME, directional selections, clipboard,
    imported/shared projects, repeated modules, output floods and stop while
