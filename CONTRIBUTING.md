@@ -50,13 +50,22 @@ separate maintainer decision after its checks pass.
 The workflow uses the built-in repository token and the approved permissions
 for release PRs and labels. That token does not automatically trigger CI on its
 own PRs; see the [release-please credential documentation](https://github.com/googleapis/release-please-action#other-actions-on-release-please-prs).
-Run the CI workflow on the release PR's exact head branch before merging:
+Release proposals start as drafts. After reviewing the diff, a maintainer marks
+the PR ready for review; that human action starts normal PR CI. If the automation
+later updates its head, mark it draft and ready again to check the new revision.
+The CI workflow can also be dispatched on its exact head branch for diagnostics:
 
 ```sh
 gh workflow run ci.yml --repo abhay-yemekar/pyturbo --ref <release-pr-head-branch>
 ```
 
 Verify that all five required checks are green on that PR's current commit.
+The generated manifest and changelog keep their generator's formatting; their
+formatter-only overrides preserve parsing and the normal lint rules.
+
+Keep `@types/node` on the agreed Node 24 major. CodeQL sub-actions are grouped
+and pinned to the same release commit. Major CI action upgrades have their own
+tracking issues and require the full CI suite before merging.
 
 ## Implementation expectations
 
