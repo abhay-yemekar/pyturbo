@@ -85,7 +85,9 @@ test('keeps tab and unindent toggles synchronized across editors and reloads', a
   await expect(options.getByLabel('Tab size (1–16)', { exact: true })).toHaveValue('4');
   await options.getByRole('button', { name: 'Cancel', exact: true }).press('Enter');
   await editor.press('F6');
-  await editor.fill('');
+  await editor.press('Control+a');
+  await editor.press('Delete');
+  await expect(editor).toHaveValue('');
   await editor.press('Tab');
   await expect(editor).toHaveValue('\t');
 });

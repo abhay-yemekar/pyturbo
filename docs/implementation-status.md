@@ -108,6 +108,8 @@ validated persistent settings across open/new editors. Unit and browser regressi
 cover 3/7-space indentation, imported hard tabs, non-BMP columns, selection deletion,
 undo, settings and reloads. Optimal Fill and Cursor Through Tabs remain open;
 their approved defaults are recorded separately from implementation status.
+Screen preferences apply their layout before waiting for IndexedDB persistence,
+so an immediate Zoom command uses the newly selected screen dimensions.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports

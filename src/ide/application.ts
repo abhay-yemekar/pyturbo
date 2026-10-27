@@ -2507,8 +2507,8 @@ export class Application {
         this.settings.pauseAfterRun = pause === 'true';
         this.settings.identifierColor = yellow === 'true' ? 'yellow' : 'green';
         this.settings.stderrColor = stderr === 'true';
-        await this.saveSettings();
         this.fit();
+        await this.saveSettings();
       },
     );
   }
