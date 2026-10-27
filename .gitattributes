@@ -1,0 +1,22 @@
+* text=auto
+/.gitattributes text eol=lf
+*.ts text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.svg text eol=lf
+*.cells.txt text eol=lf
+/.editorconfig text eol=lf
+/.node-version text eol=lf
+/public/_headers text eol=lf
+/.github/CODEOWNERS text eol=lf
+/NOTICE text eol=lf
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.png binary

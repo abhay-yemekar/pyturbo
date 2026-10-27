@@ -1,0 +1,10 @@
+name: Bug report
+description: Report incorrect behavior
+labels: ["type:bug"]
+body:
+  - type: textarea
+    attributes:
+      label: Reproduction
+      description: Include program, steps, expected result, actual result, browser and OS.
+    validations:
+      required: true
