@@ -69,14 +69,16 @@ test('keeps tab and unindent toggles synchronized across editors and reloads', a
   await editor.press('Control+o');
   await editor.press('i');
   await editor.press('F2');
+  await expect(page.getByRole('status')).toContainText('NONAME00.PY saved.');
 
   await command(page, 'New');
   await editor.press('Tab');
   await editor.press('Enter');
   await expect(editor).toHaveValue('\t\n');
   await editor.press('F2');
+  await expect(page.getByRole('status')).toContainText('NONAME01.PY saved.');
   await page.reload();
-  await expect(editor).toBeAttached();
+  await expect(editor).toHaveValue('\t\n');
   await command(page, 'Editor…');
   const options = page.getByRole('dialog', { name: 'Editor', exact: true });
   await expect(options.getByLabel('Use tab character', { exact: true })).toBeChecked();
@@ -85,6 +87,7 @@ test('keeps tab and unindent toggles synchronized across editors and reloads', a
   await expect(options.getByLabel('Tab size (1–16)', { exact: true })).toHaveValue('4');
   await options.getByRole('button', { name: 'Cancel', exact: true }).press('Enter');
   await editor.press('F6');
+  await expect(editor).toHaveValue('   a\n       b\n      ');
   await editor.press('Control+a');
   await editor.press('Delete');
   await expect(editor).toHaveValue('');
