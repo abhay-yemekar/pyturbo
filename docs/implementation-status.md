@@ -69,7 +69,12 @@ blocked in input/debugging. The first cold test took about 72 seconds, including
 CDN asset downloads measured near 50 seconds; subsequent scenarios took 6–14
 seconds. Performance targets remain unverified. Runtime tests now allow two
 minutes for initial network loading; the CI browser job has a 30-minute ceiling.
-Production deployment remains to be verified.
+PR #2 was squash-merged as `5d014f6`. The initial production deployment at
+[pyturbo.pages.dev](https://pyturbo.pages.dev) returns HTTP 200 with the required
+COOP/COEP headers and the same application bundle as the verified preview.
+All five Chromium runtime smoke checks also pass on the production origin
+(49.6 seconds total): Python execution, UTF-8 input, infinite-loop recovery,
+debugger evaluation/resume and Stop during input/debugger waits.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
@@ -79,6 +84,9 @@ progress and PR #2 is in review. Private visibility was verified after reload.
 The owner approved the
 repository-level Actions permission needed for release PR creation; it is enabled
 while default workflow token permissions remain read-only.
+The first automated release proposal incorrectly selected `1.0.0`; it remains
+unmerged and in draft. Issue #10 adds the explicit initial version `0.1.0`.
+No v1 release has been published.
 
 Record final command results in the PR validation record or update this file.
 Successful builds and small geometry fixtures do not certify the whole product.
