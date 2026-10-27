@@ -1,0 +1,8 @@
+{
+  "source": "https://turboc.pages.dev",
+  "evidence": "Private lossless captures, 27 October 2026. The original editor has 14 visible text rows, then 7 after seven Shift+Up resize steps. From file top, Page Down and Ctrl+C move to zero-based lines 13 and 6 respectively, with that line at viewport top. Ctrl+End reaches lines 26 and 12. Separate column probes confirm Ctrl+Home/End and Ctrl+Q X preserve column 2. No reference screenshots or program assets are included.",
+  "cases": [
+    { "visibleRows": 14, "pageLine": 13, "bottomLine": 26 },
+    { "visibleRows": 7, "pageLine": 6, "bottomLine": 12 }
+  ]
+}

@@ -266,8 +266,101 @@ test('distinguishes Ctrl+Page file boundaries from viewport paging', async ({ pa
       (input: HTMLTextAreaElement) =>
         input.value.slice(0, input.selectionStart).split('\n').length - 1,
     ),
-  ).toBe(59);
+  ).toBe(60);
 });
+
+async function cursorPosition(editor: Locator): Promise<{ line: number; col: number }> {
+  return editor.evaluate((input: HTMLTextAreaElement) => {
+    const offset =
+      input.selectionDirection === 'backward' ? input.selectionStart : input.selectionEnd;
+    const before = input.value.slice(0, offset);
+    return { line: before.split('\n').length - 1, col: offset - before.lastIndexOf('\n') - 1 };
+  });
+}
+
+test('keeps page overlap and viewport shortcuts aligned after resizing, including legacy aliases', async ({
+  page,
+}) => {
+  const editor = await open(page);
+  await editor.fill(Array(100).fill('abcdef').join('\n'));
+  await editor.press('Control+PageUp');
+  await editor.press('ArrowRight');
+  await editor.press('ArrowRight');
+  await editor.press('PageDown');
+  expect(await cursorPosition(editor)).toEqual({ line: 19, col: 2 });
+  await editor.press('Control+Home');
+  expect(await cursorPosition(editor)).toEqual({ line: 19, col: 2 });
+  await editor.press('Control+End');
+  expect(await cursorPosition(editor)).toEqual({ line: 38, col: 2 });
+
+  await editor.press('Control+PageUp');
+  await editor.press('Control+F5');
+  for (let index = 0; index < 7; index++) await editor.press('Shift+ArrowUp');
+  await editor.press('Enter');
+  await editor.press('ArrowRight');
+  await editor.press('ArrowRight');
+  await editor.press('PageDown');
+  expect(await cursorPosition(editor)).toEqual({ line: 12, col: 2 });
+  await editor.press('Control+End');
+  expect(await cursorPosition(editor)).toEqual({ line: 24, col: 2 });
+  await editor.press('Control+q');
+  await editor.press('e');
+  expect(await cursorPosition(editor)).toEqual({ line: 12, col: 2 });
+  await editor.press('Control+q');
+  await editor.press('x');
+  expect(await cursorPosition(editor)).toEqual({ line: 24, col: 2 });
+
+  await command(page, 'Editor…');
+  const options = page.getByRole('dialog', { name: 'Editor', exact: true });
+  await options.getByLabel('CUA keys (Ctrl+C/X/V/Z)', { exact: true }).press('Space');
+  await expect(options.getByLabel('CUA keys (Ctrl+C/X/V/Z)', { exact: true })).not.toBeChecked();
+  await options.getByRole('button', { name: 'OK', exact: true }).press('Enter');
+  await editor.press('Control+PageUp');
+  await editor.press('Control+c');
+  expect(await cursorPosition(editor)).toEqual({ line: 12, col: 0 });
+  await editor.press('Control+r');
+  expect(await cursorPosition(editor)).toEqual({ line: 0, col: 0 });
+
+  // A page may show blank rows below EOF; it must not pack the last page and
+  // move the caret away from the screen row it held before paging.
+  await editor.fill(Array(15).fill('abcdef').join('\n'));
+  await editor.press('Control+PageUp');
+  await editor.press('PageDown');
+  await editor.press('Control+Home');
+  expect(await cursorPosition(editor)).toEqual({ line: 12, col: 0 });
+});
+
+for (const layout of [
+  { name: '43 lines', rows: '43', mode: 'exact', visibleRows: 39 },
+  { name: '50 lines', rows: '50', mode: 'exact', visibleRows: 46 },
+  { name: 'Fill', rows: '25', mode: 'fill', visibleRows: 46 },
+]) {
+  test(`uses the zoomed viewport for paging and selections in ${layout.name}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1080, height: 800 });
+    const editor = await open(page);
+    await editor.fill(Array(140).fill('abcdef').join('\n'));
+    await command(page, 'Preferences…');
+    const preferences = page.getByRole('dialog', { name: 'Preferences', exact: true });
+    await preferences
+      .getByRole('combobox', { name: 'Lines', exact: true })
+      .selectOption(layout.rows);
+    await preferences
+      .getByRole('combobox', { name: 'Screen fit', exact: true })
+      .selectOption(layout.mode);
+    await preferences.getByRole('button', { name: 'OK', exact: true }).press('Enter');
+    await editor.press('F5');
+    await editor.press('Control+PageUp');
+    await editor.press('Shift+PageDown');
+    expect(await cursorPosition(editor)).toEqual({ line: layout.visibleRows - 1, col: 0 });
+    expect(await editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(0);
+    await editor.press('Control+Home');
+    expect(await cursorPosition(editor)).toEqual({ line: layout.visibleRows - 1, col: 0 });
+    await editor.press('Control+End');
+    expect(await cursorPosition(editor)).toEqual({ line: (layout.visibleRows - 1) * 2, col: 0 });
+    await editor.press('Control+PageDown');
+    expect(await cursorPosition(editor)).toEqual({ line: 139, col: 6 });
+  });
+}
 
 test('preserves manual WordStar scrolling and follows an offscreen Find result', async ({
   page,

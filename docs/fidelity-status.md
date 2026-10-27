@@ -134,7 +134,24 @@ certifies all menus, glyphs, dialogs or original interaction behavior.
 The correction passes local lint, strict typecheck, 50 unit tests and the
 production build. Fifteen browser cases pass across the three engines for the
 reference caption cells, File's pointer boundary, color preferences and native
-720×400/2×/3× scaling. Full PR CI is a separate required gate.
+720×400/2×/3× scaling. PR #28 then passed all 132 browser cases and other
+required checks. Five production UI checks also passed after its deployment.
+
+## Editor viewport navigation
+
+Private original-IDE captures verify a one-row overlap: Page Down moves 13
+lines in a 14-row text body, then 6 lines after resizing to 7 visible rows.
+Ctrl+C follows the same paging rule. The first visible line moves with the
+caret, keeping its screen row. Ctrl+Home/End and Ctrl+Q E/X select the first/last
+visible line; separate column probes confirm that the source column is retained.
+Only behavior facts are committed, in `tests/unit/fixtures/editor-navigation.json`.
+The first fast capture dropped input and is excluded from this evidence.
+
+The editor uses the host's current body height for these commands, including
+resized and zoomed windows, 43/50-line and Fill layouts. Page selections and
+preferred columns through shorter lines are covered separately. This establishes
+these commands' semantics, not physical browser/OS shortcut capture or the four
+remaining Ctrl+O option behaviors.
 
 ## Reference comparison still required
 
@@ -158,6 +175,7 @@ The matrix is pending actual browser/OS testing. Calling `preventDefault()` in
 the application does not establish that a browser or OS reserved key was
 captured. Playwright WebKit also does not establish behaviour on real Safari or
 iOS. Menus and visible controls must remain usable for unavailable shortcuts.
+The owner approved continuing implementation with these real-device gates open.
 
 | Key group                                  | Chrome/Windows                   | Edge/Windows                     | Firefox/Windows       | Safari/macOS          | Safari/iOS                    |
 | ------------------------------------------ | -------------------------------- | -------------------------------- | --------------------- | --------------------- | ----------------------------- |
