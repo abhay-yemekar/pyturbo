@@ -89,8 +89,16 @@ Pages on its final combined revision and was merged as `54e0df4`. Production
 serves the new palette bundle with HTTP 200 and isolation headers. All **eight
 production Chromium smoke cases** pass (37.9 seconds): the five runtime checks
 above plus independent Colors choices, cancellation/persistence and keyboard/
-pointer interaction. The menu-row correction has 15 local browser checks across
-the three engines; its complete CI suite remains required before merge.
+pointer interaction. PR #28's menu-row correction passed all **132 browser cases**,
+the other required jobs, CodeQL and Pages, and was merged as `24d2e27`. Five
+production UI cases pass for caption placement, Colors and native canvas scaling.
+
+Editor viewport navigation now uses the current text-body height for page keys,
+legacy aliases and viewport-boundary shortcuts. Private original-IDE probes verify
+one-row page overlap, matching viewport scrolling and preserved source columns in
+14-row and 7-row editor bodies. Tests also cover resized windows, 43/50-line and
+Fill layouts, selections and file edges. Full PR checks and deployment verification
+remain required for this change.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
@@ -115,8 +123,9 @@ Successful builds and small geometry fixtures do not certify the whole product.
 2. Repeat the verified Pages preview checks on production after its deployment.
 3. Privately compare original desktop, menus, dialogs, windows, scrollbars and
    modes. Commit only PyTurbo screenshots/baselines.
-4. Complete real browser/OS shortcut tests, Safari/iOS and Android checks.
-5. Resolve the four Ctrl+O toggles and adaptive page distances in
+4. Complete real browser/OS shortcut tests, Safari/iOS and Android checks. The
+   owner approved continuing implementation while these checks remain open.
+5. Resolve the four Ctrl+O toggles in
    [editor-and-storage.md](editor-and-storage.md).
 6. Verify save failures/conflicts, IME, directional selections, clipboard,
    imported/shared projects, repeated modules, output floods and stop while

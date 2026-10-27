@@ -825,7 +825,7 @@ export class Application {
       const editor = window.editor;
       const layout = this.editorLayout(editor);
       const lines = layout.lines;
-      const maxY = Math.max(0, lines.length - (r.h - 2));
+      const maxY = Math.max(0, lines.length - 1);
       editor.scrollY = Math.max(0, Math.min(maxY, editor.scrollY));
       const maxX = Math.max(0, layout.maxWidth - (r.w - 2));
       editor.scrollX = Math.max(0, Math.min(maxX, editor.scrollX));
@@ -3081,21 +3081,10 @@ export class Application {
         handle('cut');
         return;
       }
-      if (!control && (key === 'PageUp' || key === 'PageDown')) {
-        event.preventDefault();
-        this.editor.page(
-          (key === 'PageUp' ? -1 : 1) * ((this.active?.bounds.h ?? 21) - 2),
-          event.shiftKey,
-        );
-        this.keepCursorVisible();
-        this.syncInput();
-        this.dirty = true;
-        return;
-      }
       const previousEditor = this.editor;
       const previousCursor = previousEditor.cursor;
       const previousText = previousEditor.text;
-      if (previousEditor.handleKey(event)) {
+      if (previousEditor.handleKey(event, (this.active?.bounds.h ?? 22) - 2)) {
         event.preventDefault();
         const command = this.editor.pendingCommand;
         if (command === 'write-block')
@@ -3166,7 +3155,7 @@ export class Application {
     const length = window.editor
       ? this.editorLayout(window.editor).lines.length
       : this.windowLines(window).length;
-    const max = Math.max(0, length - (window.bounds.h - 2));
+    const max = Math.max(0, length - (window.editor ? 1 : window.bounds.h - 2));
     if (window.editor)
       window.editor.scrollY = Math.max(0, Math.min(max, window.editor.scrollY + amount));
     else window.scrollY = Math.max(0, Math.min(max, (window.scrollY ?? 0) + amount));
@@ -3318,7 +3307,7 @@ export class Application {
       const length = window.editor
         ? this.editorLayout(window.editor).lines.length
         : this.windowLines(window).length;
-      const max = Math.max(0, length - (r.h - 2));
+      const max = Math.max(0, length - (window.editor ? 1 : r.h - 2));
       const offset = window.editor?.scrollY ?? window.scrollY ?? 0;
       if (max > 0) {
         const trackLength = r.h - 4;
@@ -3408,7 +3397,7 @@ export class Application {
         const length = this.active.editor
           ? this.editorLayout(this.active.editor).lines.length
           : this.windowLines(this.active).length;
-        const max = Math.max(0, length - (r.h - 2));
+        const max = Math.max(0, length - (this.active.editor ? 1 : r.h - 2));
         const next = Math.max(
           0,
           Math.min(max, Math.round((d.offset ?? 0) + ((y - d.y) * max) / Math.max(1, r.h - 5))),

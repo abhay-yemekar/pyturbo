@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { EditorBuffer } from '../../src/editor/buffer';
 import { pythonAttributes } from '../../src/editor/highlighter';
+import navigationReference from './fixtures/editor-navigation.json';
 
-function key(buffer: EditorBuffer, key: string, ctrlKey = false, shiftKey = false): boolean {
-  return buffer.handleKey({
-    key,
-    ctrlKey,
-    shiftKey,
-    altKey: false,
-    metaKey: false,
-    isComposing: false,
-  } as KeyboardEvent);
+function key(
+  buffer: EditorBuffer,
+  key: string,
+  ctrlKey = false,
+  shiftKey = false,
+  viewportRows = 20,
+): boolean {
+  return buffer.handleKey(
+    { key, ctrlKey, shiftKey, altKey: false, metaKey: false, isComposing: false } as KeyboardEvent,
+    viewportRows,
+  );
 }
 
 describe('EditorBuffer', () => {
@@ -49,6 +52,75 @@ describe('EditorBuffer', () => {
     buffer.move(0, -1);
     buffer.move(0, -1);
     expect(buffer.position.col).toBe(4);
+  });
+
+  it.each(navigationReference.cases)(
+    'matches reference paging in a $visibleRows-row editor body',
+    ({ visibleRows, pageLine, bottomLine }) => {
+      const buffer = new EditorBuffer('MAIN.PY', Array(55).fill('abcdef').join('\n'));
+      buffer.goto(0, 2);
+      key(buffer, 'PageDown', false, false, visibleRows);
+      expect(buffer.position).toEqual({ line: pageLine, col: 2 });
+      expect(buffer.scrollY).toBe(pageLine);
+      key(buffer, 'End', true, false, visibleRows);
+      expect(buffer.position).toEqual({ line: bottomLine, col: 2 });
+      key(buffer, 'Home', true, false, visibleRows);
+      expect(buffer.position).toEqual({ line: pageLine, col: 2 });
+      key(buffer, 'q', true, false, visibleRows);
+      key(buffer, 'x', false, false, visibleRows);
+      expect(buffer.position).toEqual({ line: bottomLine, col: 2 });
+      key(buffer, 'q', true, false, visibleRows);
+      key(buffer, 'e', false, false, visibleRows);
+      expect(buffer.position).toEqual({ line: pageLine, col: 2 });
+      key(buffer, 'PageUp', false, false, visibleRows);
+      expect(buffer.position).toEqual({ line: 0, col: 2 });
+      expect(buffer.scrollY).toBe(0);
+      buffer.cuaKeys = false;
+      key(buffer, 'c', true, false, visibleRows);
+      expect(buffer.position).toEqual({ line: pageLine, col: 2 });
+      expect(buffer.scrollY).toBe(pageLine);
+      key(buffer, 'r', true, false, visibleRows);
+      expect(buffer.position).toEqual({ line: 0, col: 2 });
+      expect(buffer.scrollY).toBe(0);
+    },
+  );
+
+  it('preserves page selection direction and preferred columns through short lines', () => {
+    const lines = Array(80).fill('abcdef');
+    lines[13] = 'x';
+    const buffer = new EditorBuffer('MAIN.PY', lines.join('\n'));
+    buffer.goto(0, 5);
+    const start = buffer.cursor;
+    key(buffer, 'PageDown', false, true, 14);
+    expect(buffer.position).toEqual({ line: 13, col: 1 });
+    key(buffer, 'PageDown', false, true, 14);
+    expect(buffer.position).toEqual({ line: 26, col: 5 });
+    expect(buffer.anchor).toBe(start);
+    key(buffer, 'PageUp', false, true, 14);
+    key(buffer, 'PageUp', false, true, 14);
+    expect(buffer.position).toEqual({ line: 0, col: 5 });
+    buffer.goto(50, 3);
+    buffer.scrollY = 40;
+    const backwardsAnchor = buffer.cursor;
+    key(buffer, 'Home', true, true, 14);
+    expect(buffer.position).toEqual({ line: 40, col: 3 });
+    expect(buffer.anchor).toBe(backwardsAnchor);
+    expect(buffer.cursor).toBeLessThan(buffer.anchor ?? 0);
+  });
+
+  it.each([1, 39, 46])('uses a %i-row viewport and clamps commands at file edges', (rows) => {
+    const buffer = new EditorBuffer('MAIN.PY', Array(100).fill('abcdef').join('\n'));
+    key(buffer, 'PageDown', false, false, rows);
+    expect(buffer.position.line).toBe(Math.max(1, rows - 1));
+    buffer.scrollY = 90;
+    key(buffer, 'End', true, false, rows);
+    expect(buffer.position.line).toBe(Math.min(99, 90 + rows - 1));
+    key(buffer, 'PageDown', true, false, rows);
+    expect(buffer.cursor).toBe(buffer.text.length);
+    key(buffer, 'PageUp', true, false, rows);
+    expect(buffer.cursor).toBe(0);
+    key(buffer, 'PageUp', false, false, rows);
+    expect(buffer.scrollY).toBeGreaterThanOrEqual(0);
   });
 
   it('extends selections and replaces them as one undoable change', () => {

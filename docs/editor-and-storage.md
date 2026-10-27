@@ -52,11 +52,19 @@ that dialog or operation. Literal search supports case sensitivity, direction, w
 and a starting offset. Replace-all is a single undoable edit and treats replacement text
 literally, including `$` characters.
 
+Page keys use the active editor's visible text height minus one, retaining an overlap
+row and the caret's screen row. Ctrl+Home/End and Ctrl+Q E/X use the viewport's first/last
+text line and preserve the source column. The host supplies the current body height
+after resize, zoom, 43/50-line or Fill changes. Ctrl+R/C share that page distance when
+CUA keys are disabled. File-boundary commands remain separate. A page can leave blank
+rows below EOF rather than packing the final viewport and moving the caret upward.
+Private original-IDE captures establish the 14-row/13-line and 7-row/6-line cases;
+only numeric behavior facts are committed in `tests/unit/fixtures/editor-navigation.json`.
+
 The plan lists Ctrl+O T/U/F/R as tab mode, unindent, optimal fill, and cursor-through-tabs
 toggles, but does not specify their detailed Turbo behavior. These four toggles remain
 unimplemented pending reference verification. No alternative tab/fill behavior is silently
-assigned to them. Fixed 19-line page/viewport key distances also need adaptation by the
-host for 43/50-line or Fill layouts. Bookmarks and undo history are session state, not
+assigned to them. Bookmarks and undo history are session state, not
 persisted file metadata. Unicode grapheme clusters beyond surrogate pairs are not yet
 treated as indivisible cursor units.
 

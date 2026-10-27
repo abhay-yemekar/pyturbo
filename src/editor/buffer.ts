@@ -260,7 +260,9 @@ export class EditorBuffer {
   }
 
   page(rows: number, select = false): void {
+    const previousLine = this.position.line;
     this.move(0, rows, select);
+    this.scrollY = Math.max(0, this.scrollY + this.position.line - previousLine);
   }
 
   selectAll(): void {
@@ -478,7 +480,7 @@ export class EditorBuffer {
     }
   }
 
-  private quickCommand(key: string): void {
+  private quickCommand(key: string, viewportRows: number): void {
     if (/^\d$/.test(key)) {
       const bookmark = this.bookmarks.get(Number(key));
       if (bookmark !== undefined) this.moveTo(bookmark);
@@ -507,10 +509,10 @@ export class EditorBuffer {
         this.end(false, true);
         break;
       case 'e':
-        this.goto(this.scrollY);
+        this.goto(this.scrollY, this.position.col);
         break;
       case 'x':
-        this.goto(this.scrollY + 19);
+        this.goto(this.scrollY + viewportRows - 1, this.position.col);
         break;
       case 'p':
         this.moveTo(this.previousPosition);
@@ -529,7 +531,9 @@ export class EditorBuffer {
   }
 
   /** Returns true only for an editor command. Clipboard/IME text is handled by the host. */
-  handleKey(event: KeyboardEvent): boolean {
+  handleKey(event: KeyboardEvent, viewportRows = 20): boolean {
+    const visibleRows = Math.max(1, Math.trunc(viewportRows));
+    const pageRows = Math.max(1, visibleRows - 1);
     const key = event.key;
     const lower = key.toLowerCase();
     const control = event.ctrlKey || event.metaKey;
@@ -539,7 +543,7 @@ export class EditorBuffer {
       this.prefix = null;
       if (key === 'Escape') return true;
       if (prefix === 'k') this.blockCommand(lower);
-      if (prefix === 'q') this.quickCommand(lower);
+      if (prefix === 'q') this.quickCommand(lower, visibleRows);
       if (prefix === 'o' && lower === 'i') this.autoIndent = !this.autoIndent;
       return true;
     }
@@ -574,10 +578,10 @@ export class EditorBuffer {
           this.moveWord(1, event.shiftKey);
           return true;
         case 'Home':
-          this.goto(this.scrollY, 0, event.shiftKey);
+          this.goto(this.scrollY, this.position.col, event.shiftKey);
           return true;
         case 'End':
-          this.goto(this.scrollY + 19, 0, event.shiftKey);
+          this.goto(this.scrollY + visibleRows - 1, this.position.col, event.shiftKey);
           return true;
         case 'PageUp':
           this.home(event.shiftKey, true);
@@ -615,10 +619,10 @@ export class EditorBuffer {
           this.scrollY++;
           return true;
         case 'r':
-          this.page(-19);
+          this.page(-pageRows);
           return true;
         case 'c':
-          this.page(19);
+          this.page(pageRows);
           return true;
         case 'g':
           this.deleteForward();
@@ -671,10 +675,10 @@ export class EditorBuffer {
         this.end(event.shiftKey);
         return true;
       case 'PageUp':
-        this.page(-19, event.shiftKey);
+        this.page(-pageRows, event.shiftKey);
         return true;
       case 'PageDown':
-        this.page(19, event.shiftKey);
+        this.page(pageRows, event.shiftKey);
         return true;
       case 'Insert':
         if (event.shiftKey) return false;

@@ -27,6 +27,9 @@ choices and stack deviations require confirmation before implementation.
 On 27 October the owner reaffirmed the 9×16 target after learning that the
 reference emulator renders 8×16 cells at 640×400 with some different glyph shapes.
 The emulator's bitmap dimensions do not replace the agreed PyTurbo target.
+The owner approved continuing implementation while real browser/OS and device
+checks remain explicitly open. Automated Chromium, Firefox and Playwright WebKit
+results do not certify Safari, macOS/iOS, Android or physical shortcut capture.
 
 ## Available dependency pins
 
