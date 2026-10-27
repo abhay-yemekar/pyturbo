@@ -183,6 +183,76 @@ test('saves to real IndexedDB and restores the saved desktop after reload', asyn
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).press('Enter');
 });
 
+test('keeps edits made during an in-flight save modified and protected by the close warning', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const state = window as unknown as { releaseFileSave?: () => void };
+    const original = IDBObjectStore.prototype.put;
+    const complete = Object.getOwnPropertyDescriptor(IDBTransaction.prototype, 'oncomplete');
+    IDBObjectStore.prototype.put = function (
+      value: unknown,
+      key?: IDBValidKey,
+    ): IDBRequest<IDBValidKey> {
+      if (typeof key === 'string' && key.startsWith('file:')) {
+        const transaction = this.transaction;
+        Object.defineProperty(transaction, 'oncomplete', {
+          configurable: true,
+          set(handler: ((this: IDBTransaction, event: Event) => void) | null) {
+            complete?.set?.call(
+              transaction,
+              handler &&
+                ((event: Event) => {
+                  state.releaseFileSave = () => handler.call(transaction, event);
+                }),
+            );
+          },
+        });
+      }
+      return original.call(this, value, key);
+    };
+  });
+  const editor = await open(page);
+  const persisted = 'print("captured by the save")';
+  const latest = 'print("new edits while saving")';
+  await editor.fill(persisted);
+  await editor.press('F2');
+  await page.waitForFunction(() => 'releaseFileSave' in window);
+  await editor.fill(latest);
+  await page.evaluate(() =>
+    (window as unknown as { releaseFileSave: () => void }).releaseFileSave(),
+  );
+  await expect(page.getByRole('status')).toContainText(
+    'NONAME00.PY saved; newer edits are unsaved.',
+  );
+  const stored = await page.evaluate(
+    () =>
+      new Promise<unknown>((resolve, reject) => {
+        const request = indexedDB.open('pyturbo');
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+          const database = request.result;
+          const record = database
+            .transaction('workspace')
+            .objectStore('workspace')
+            .get('file:NONAME00.PY');
+          record.onerror = () => reject(record.error);
+          record.onsuccess = () => {
+            resolve(record.result);
+            database.close();
+          };
+        };
+      }),
+  );
+  expect(stored).toMatchObject({ content: persisted });
+  await expect(editor).toHaveValue(latest);
+  await editor.press('Alt+F3');
+  const guard = page.getByRole('dialog', { name: 'Save File', exact: true });
+  await expect(guard).toContainText('Save changes to NONAME00.PY?');
+  await guard.getByRole('button', { name: 'Cancel', exact: true }).press('Enter');
+  await expect(editor).toHaveValue(latest);
+});
+
 test('preserves the modified buffer when browser storage rejects a save', async ({ page }) => {
   await page.addInitScript(() => {
     const original = IDBObjectStore.prototype.put;

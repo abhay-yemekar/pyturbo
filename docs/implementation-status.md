@@ -110,6 +110,14 @@ undo, settings and reloads. Optimal Fill and Cursor Through Tabs remain open;
 their approved defaults are recorded separately from implementation status.
 Screen preferences apply their layout before waiting for IndexedDB persistence,
 so an immediate Zoom command uses the newly selected screen dimensions.
+PR #32 passed all 150 browser cases, all other required checks, CodeQL and Pages,
+and was merged as `5181929`. Seven production Chromium editor checks pass for
+settings, persistence, tab stops and viewport navigation.
+
+Saving now records the exact persisted source as its baseline. New edits made
+while IndexedDB completes remain modified, with an accurate status message and
+the close/save warning intact. A deterministic browser test delays save completion
+while the user edits and checks both stored content and the newer in-memory buffer.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
