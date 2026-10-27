@@ -91,8 +91,9 @@ function readInput(singleKey = false): string | null {
 function debugPause(stateJSON: string): string {
   if (!shared || !control) throw new Error('Debugger requires SharedArrayBuffer.');
   flushOutput();
-  emit(JSON.parse(stateJSON) as RuntimeEvent);
-  status('paused', 'Program paused');
+  const state = JSON.parse(stateJSON) as Extract<RuntimeEvent, { type: 'paused' }>;
+  emit(state);
+  status('paused', `Paused ${state.filename}:${state.line}`);
   while (Atomics.load(control, 2) === 0) {
     Atomics.wait(control, 2, 0, 100);
     python.checkInterrupt();

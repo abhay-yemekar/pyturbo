@@ -551,6 +551,11 @@ export class Application {
       )
         this.input.setSelectionRange(selection.from, selection.to, direction);
     }
+    this.syncMirror();
+  }
+
+  private syncMirror(): void {
+    const editor = this.editor;
     const visibleText =
       editor?.text ??
       (this.active
@@ -726,7 +731,9 @@ export class Application {
         }
       }
     this.renderer.render(cursor);
-    this.syncInput();
+    // Painting must not reset a native selection between select-all and input.
+    // Text and caret changes synchronize the textarea in their event handlers.
+    this.syncMirror();
     this.statusMirror.textContent = `${this.runtimeStatus}: ${this.status}`;
     if (this.plot) this.plot.hidden = !this.userScreen;
     if (this.graphic) this.graphic.hidden = !this.userScreen;
@@ -2429,6 +2436,7 @@ export class Application {
           if (this.pausedAfterRun) this.appendOutput('\nPress any key…');
           this.userScreen = this.pausedAfterRun;
         }
+        this.syncInput();
         this.focus();
         break;
       case 'errors':
@@ -3007,6 +3015,7 @@ export class Application {
       this.focus();
       if (!this.inputWaiting && !this.shell && !this.runtime.running) {
         this.userScreen = false;
+        this.syncInput();
         this.dirty = true;
       }
       return;

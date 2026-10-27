@@ -14,7 +14,14 @@ const headers = Object.fromEntries(
 );
 
 export default defineConfig({
-  server: { headers },
+  server: {
+    headers: {
+      ...headers,
+      'Content-Security-Policy': headers['Content-Security-Policy']
+        .replace("style-src 'self'", "style-src 'self' 'unsafe-inline'")
+        .replace("connect-src 'self'", "connect-src 'self' ws://127.0.0.1:*"),
+    },
+  },
   preview: { headers },
   worker: { format: 'es' },
   plugins: [

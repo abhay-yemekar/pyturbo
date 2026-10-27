@@ -9,8 +9,8 @@ application server or user account.
 
 This is an early implementation of the [project plan](docs/project-plan.md), not a
 finished v1 release. Exact visual fidelity, full browser compatibility, and
-production readiness have **not** been certified. The planned address is
-`https://pyturbo.pages.dev`; that address is not evidence of a completed deployment.
+production readiness have **not** been certified. The Cloudflare Pages project
+reserves `https://pyturbo.pages.dev`; a successful deployment is still pending.
 See [implementation status](docs/implementation-status.md) for verification limits.
 
 ## Current implementation
@@ -23,15 +23,15 @@ and compressed share links.
 Runtime code includes syntax checks, execution, stdout/stderr, live `input()`,
 Stop/reset, arguments, project modules, package loading, and a Python shell.
 Debugger, watches, evaluation, call stack, `conio`, BGI-style graphics, and a
-canvas-backed `turtle` have implementations requiring integrated browser checks.
-Preferences, fullscreen/touch controls, accessibility mirrors, and PWA caching
-also require their dedicated validation. Source coverage is not a claim that
-every interaction has passed.
+canvas-backed `turtle` have implementations and browser coverage. Preferences,
+fullscreen/touch controls, accessibility mirrors, and PWA caching also have
+implementations. Source coverage is not a claim that every interaction has passed.
 
 Component tests cover engine, editor, tokenizer, storage/share, and runtime
-contracts. Actual browser storage, clipboard/IME, Python/CDN execution,
-input/interrupts, debugging, offline behavior, and deployment need end-to-end
-verification. Full original-IDE comparisons and approved screen baselines are
+contracts. Browser checks exercise storage, synthetic IME, Python/CDN execution,
+input/interrupts, debugging, packages, graphics and cached offline base-runtime
+reload. Deployment, real OS clipboard/IME and device checks remain pending.
+Full original-IDE comparisons and approved screen baselines are
 pending; see [fidelity status](docs/fidelity-status.md).
 
 ## Run locally
@@ -89,7 +89,8 @@ before running them; see [security](SECURITY.md).
 Compatible Pyodide packages and pure-Python wheels are supported by the design.
 Desktop-only native libraries, raw sockets, subprocesses, and arbitrary native
 extensions remain outside its browser-only scope. Offline operation requires a
-previously cached app/runtime/packages and remains under validation.
+previously cached app/runtime/packages. Offline cold reload of the base interpreter
+has passed automated checks; optional package caching still needs validation.
 
 ## Development and credits
 

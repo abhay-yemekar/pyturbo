@@ -1,6 +1,6 @@
 # Implementation and verification status
 
-Recorded during initial implementation on 26 October 2026. Source coverage and
+Updated on 27 October 2026. Source coverage and
 verified behavior are different. This is not a completed v1 launch checklist.
 
 ## Source coverage
@@ -22,18 +22,48 @@ verified behavior are different. This is not a completed v1 launch checklist.
 Unsupported legacy commands are disabled where no implementation exists. Other
 commands may use simplified interactions rather than complete Turbo parity.
 
-## Verified component evidence
+## Verification record
 
-- Engine tests passed at the engine milestone; detailed scope and font probe/atlas
-  evidence are in [fidelity-status.md](fidelity-status.md).
-- Editor/storage targeted tests passed **24 tests**, covering newline/cursor/
-  selection behavior, undo/save state, indentation/overwrite, blocks/bookmarks,
-  literal search/replace, token colors/malformed strings, storage validation/
-  errors, preferences, and bounded share decoding.
-- Storage tests mock the key-value layer. They do not establish browser
-  IndexedDB, quota, private-mode, or persistence behavior.
-- Scoped editor/storage Biome checks passed. Final whole-application checks,
-  browser tests, CI, and deployed verification must run after integration.
+- Whole-project lint and strict TypeScript checks pass.
+- All **43 unit tests** pass. V8 coverage reports 61.42% statements and 63.48%
+  lines for the configured coverage scope; it does not cover the entire IDE.
+- The production build and PWA generation pass. Production preview applies the
+  same CSP and isolation headers as the Pages `_headers` file. Development alone
+  allows Vite's injected styles and localhost WebSocket connection.
+- The initial full browser run passed **120 of 123 cases**. It covers Chromium,
+  Firefox and Playwright WebKit, with actual Python 3.14.2 running in a worker.
+  The three failures exposed a textarea selection race and missing waits for
+  asynchronous deletion and debugger stepping. After fixes, all **18 regression
+  cases** pass: those three scenarios repeated twice in each engine. The full
+  GitHub suite must pass on the published revision before merging.
+- Cold offline reload with a new Python worker passed in all three engines.
+  This verifies the cached app and base interpreter, not every optional package.
+- Real NumPy/Matplotlib, a pinned pure-Python wheel, package failure recovery,
+  changed/deleted modules, arguments, getch, BGI/turtle output, blocked-input Stop,
+  paused-debugger Stop, shared-buffer input and fallback stdin were exercised.
+- Browser editor cases exercise actual IndexedDB reload, a simulated quota
+  failure, Unicode shares, traversal rejection, synthetic IME, directional
+  selections, search, modal focus, Help scrolling and Watch/Project selection.
+  Synthetic IME is not a substitute for an operating-system IME check.
+- The production dependency audit reports no known vulnerabilities.
+- Native VGA screenshots and cell fixtures describe the implementation, not
+  approved original-IDE fidelity. See [fidelity-status.md](fidelity-status.md).
+
+## Repository and hosting
+
+The local folder is connected to the personal repository
+[`abhay-yemekar/pyturbo`](https://github.com/abhay-yemekar/pyturbo). The accepted
+main protection rules, five required CI checks, squash-only merges, branch
+cleanup, topics, labels, phase milestones, secret scanning, push protection and
+Dependabot settings are configured.
+
+The Git-connected Cloudflare Pages project `pyturbo` reserves `pyturbo.pages.dev`.
+Both production and preview environments use Node 24 and pnpm 12.15.0, with
+`pnpm build` and output directory `dist`. A successful preview and production
+deployment remain to be verified. The GitHub Projects board is still pending;
+the current CLI authorization lacks its Projects scope. The owner approved the
+repository-level Actions permission needed for release PR creation; it is enabled
+while default workflow token permissions remain read-only.
 
 Record final command results in the PR validation record or update this file.
 Successful builds and small geometry fixtures do not certify the whole product.
@@ -54,7 +84,7 @@ Successful builds and small geometry fixtures do not certify the whole product.
    waiting for input or debugger commands.
 7. Validate graphics/packages, mobile landscape/touch, screen readers, cached
    offline runtime/packages and measured performance budgets.
-8. Complete launch assets, owner review, versioning/release work, and any
+8. Confirm the final logo/icon, complete launch assets, owner review, versioning/release work, and any
    explicitly authorized announcements or optional analytics.
 
 The implementation spans areas from several roadmap phases. No phase is fully

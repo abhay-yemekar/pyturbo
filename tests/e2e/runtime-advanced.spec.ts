@@ -73,6 +73,9 @@ test('refreshes changed project modules and removes deleted modules between warm
   await page.keyboard.press('Alt+p');
   await page.keyboard.press('d');
   await accept(page, 'Delete Project Item', 'Delete');
+  // IndexedDB deletion finishes asynchronously; wait for its editor to close
+  // before taking another project snapshot for the next run.
+  await expect(editor(page)).not.toHaveValue('VALUE = 22\n');
   await activateFile(page, 'main.py');
   await run(page);
   await expect(output(page)).toContainText("ModuleNotFoundError: No module named 'helper'");
@@ -99,7 +102,11 @@ test('loads NumPy and renders a Matplotlib plot under the production CSP', async
     'import numpy as np\nimport matplotlib.pyplot as plt\nprint("numpy total", np.arange(4).sum())\nplt.plot([1, 2, 3], [1, 4, 9])\nplt.title("PyTurbo plot")\n',
   );
   await expect(output(page)).toContainText('numpy total 6', { timeout: 90_000 });
-  const plot = page.getByRole('img', { name: 'Python matplotlib plot', exact: true });
+  const plot = page.getByRole('img', {
+    name: 'Python matplotlib plot',
+    exact: true,
+    includeHidden: true,
+  });
   await expect(plot).toBeAttached({ timeout: 60_000 });
   await expect(status(page)).toContainText('Program finished', { timeout: 60_000 });
   await page.keyboard.press('Alt+F5');
@@ -154,7 +161,11 @@ test('getch consumes one key immediately and BGI/turtle canvases follow their li
     page,
     'import graphics as g\ng.initgraph()\ng.setcolor(g.GREEN)\ng.bar(10, 10, 30, 30)\ninput("BGI ready: ")\ng.closegraph()\n',
   );
-  const canvas = page.getByRole('img', { name: 'Python graphics output', exact: true });
+  const canvas = page.getByRole('img', {
+    name: 'Python graphics output',
+    exact: true,
+    includeHidden: true,
+  });
   await expect(canvas).toBeVisible();
   await expect(status(page)).toContainText('waiting for input');
   expect(

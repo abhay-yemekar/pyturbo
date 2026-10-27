@@ -90,6 +90,7 @@ test('traces, evaluates a local, and resumes from the Turbo debugger', async ({ 
   await page.keyboard.press('F7');
   await expect(page.getByTestId('runtime-status')).toContainText('paused:');
   await page.keyboard.press('F7');
+  await expect(page.getByTestId('runtime-status')).toContainText('Paused NONAME00.PY:2');
   await page.keyboard.press('Control+F4');
   const evaluate = page.getByRole('dialog', { name: 'Evaluate/Modify', exact: true });
   await expect(evaluate).toBeAttached();

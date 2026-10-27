@@ -45,6 +45,11 @@ performance budgets; those claims need measurement.
 - Stop wakes blocking input/debugger waits as well as signaling an interrupt.
   A shared debugger mailbox allows commands while the worker is paused.
 
+The owner separately approved the main protection/merge/security settings and
+GitHub Actions release PR creation for this repository. GitHub combines PR
+creation and approval in one repository setting; the release workflow creates
+release PRs, and default workflow token permissions remain read-only.
+
 ## Reference questions still open
 
 IDE-only palette defaults, selected-disabled menu color, full golden screens,
