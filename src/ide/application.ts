@@ -21,6 +21,14 @@ import {
   type WorkspaceSettings,
   WorkspaceStore,
 } from '../storage/workspace';
+import {
+  type ColorDialogState,
+  colorDialogRects,
+  colorListStart,
+  drawColorDialog,
+  selectedColorItem,
+} from './color-dialog';
+import { COLOR_GROUPS, COLOR_NAMES, colorAttribute, windowColorGroup } from './colors';
 import { hotkey, type MenuItem, menus, plain } from './menus';
 
 type WindowKind = 'editor' | 'messages' | 'watch' | 'output' | 'help' | 'project' | 'notes';
@@ -62,6 +70,7 @@ interface DialogState {
   width: number;
   fieldIndex: number;
   kind?: 'colors';
+  colors?: ColorDialogState;
   buttonRects: Rect[];
   fieldRows: number[];
   listTop: number;
@@ -82,38 +91,6 @@ interface ConsoleLine {
 
 const STARTER =
   '# Code Python like it\'s 1992.\n# Ctrl+F9 Run   Alt+F5 User screen   F1 Help\n\nprint("Hello, world!")\n';
-const COLOR_ROLES: Record<string, number> = {
-  normal: 0x1e,
-  comment: 0x13,
-  reserved: 0x1f,
-  identifier: 0x1a,
-  symbol: 0x1e,
-  string: 0x14,
-  integer: 0x17,
-  float: 0x16,
-  octal: 0x18,
-  hex: 0x10,
-  character: 0x15,
-  preprocessor: 0x31,
-  illegal: 0x40,
-  execution: 0x30,
-  breakpoint: 0x4f,
-  selection: 0x71,
-  activeBorder: 0x1f,
-  inactiveBorder: 0x17,
-  icons: 0x1a,
-  scrollbar: 0x13,
-  thumb: 0x31,
-  desktop: 0x71,
-  menu: 0x70,
-  selectedMenu: 0x20,
-  status: 0x70,
-  dialog: 0x7f,
-  message: 0x31,
-  watch: 0x31,
-  help: 0x1f,
-  output: 0x07,
-};
 const HELP = [
   'PyTurbo Help',
   '',
@@ -211,7 +188,6 @@ export class Application {
   private plot?: HTMLImageElement;
   private compileRequested = false;
   private pendingRun?: DebugOptions | 'normal';
-  private colorRole = 'identifier';
   private singleKeyInput = false;
   private composing = false;
   private consoleAttr = 0x07;
@@ -351,6 +327,17 @@ export class Application {
       'wheel',
       (event) => {
         event.preventDefault();
+        if (this.dialog?.colors) {
+          const point = this.point(event);
+          const layout = colorDialogRects(this.buffer.cols, this.buffer.rows);
+          const key = this.contains(layout.group, point.x, point.y)
+            ? 'group'
+            : this.contains(layout.item, point.x, point.y)
+              ? 'item'
+              : undefined;
+          if (key)
+            this.changeColorControl(key, this.dialog.colors[key] + Math.sign(event.deltaY) * 3);
+        }
         if (this.active && !this.dialog && !this.userScreen)
           this.scrollWindow(this.active, Math.sign(event.deltaY) * 3);
         this.dirty = true;
@@ -600,7 +587,15 @@ export class Application {
   }
 
   private attr(role: string, fallback: number): number {
-    return this.settings.colors[role] ?? fallback;
+    const colors = this.dialog?.colors?.values ?? this.settings.colors;
+    if (
+      (role === 'identifier' || role === 'editIdentifier') &&
+      this.settings.identifierColor === 'yellow' &&
+      colors.editIdentifier === undefined &&
+      colors.identifier === undefined
+    )
+      return 0x1e;
+    return colorAttribute(colors, role, fallback);
   }
   private hotText(x: number, y: number, label: string, attr: number, hotAttr: number): void {
     let hot = false;
@@ -650,12 +645,23 @@ export class Application {
         const width = plain(menu.label).length + 2;
         const attr = this.attr(selected ? 'selectedMenu' : 'menu', selected ? 0x20 : 0x70);
         if (selected) b.fill(x, 0, width, 1, ' ', attr);
-        this.hotText(x + 1, 0, menu.label, attr, (attr & 0xf0) | 4);
+        this.hotText(
+          x + 1,
+          0,
+          menu.label,
+          attr,
+          this.attr(
+            selected ? 'mainMenuSelectedLetter' : 'mainMenuFirstLetter',
+            selected ? 0x24 : 0x74,
+          ),
+        );
       });
       b.fill(0, b.rows - 1, b.cols, 1, ' ', this.attr('status', 0x70));
       let status = '~F1~ Help  ~F2~ Save  ~F3~ Open  ~Alt-F9~ Compile  ~F9~ Make  ~F10~ Menu';
       const selected = this.menuStack.at(-1);
-      if (this.dialog)
+      if (this.dialog?.colors)
+        status = `~F1~ Help │ ${this.dialog.colors.focus === 'group' ? 'Chooses general color group to modify' : this.dialog.colors.focus === 'item' ? 'Chooses color item to modify' : 'Tab changes controls; arrow keys choose colors'}`;
+      else if (this.dialog)
         status = `~F1~ Help │ ${this.dialog.fields[this.dialog.fieldIndex]?.label ?? 'Select a button'}`;
       else if (selected)
         status = `~F1~ Help │ ${selected.items[selected.selected]?.hint || plain(selected.items[selected.selected]?.label ?? '')}`;
@@ -670,7 +676,7 @@ export class Application {
         b.rows - 1,
         status,
         this.attr('status', 0x70),
-        (this.attr('status', 0x70) & 0xf0) | 4,
+        this.attr('statusHotKeys', 0x74),
       );
       if (this.moveMode)
         b.text(
@@ -811,22 +817,11 @@ export class Application {
   private drawWindow(window: IdeWindow, active: boolean): void {
     const b = this.buffer;
     const r = window.bounds;
-    const cyan = ['messages', 'watch', 'project'].includes(window.kind);
-    const role = window.kind === 'messages' ? 'message' : window.kind;
-    const textAttr = this.attr(
-      role,
-      window.kind === 'output'
-        ? 0x07
-        : cyan
-          ? 0x31
-          : window.kind === 'help'
-            ? 0x1f
-            : this.attr('normal', 0x1e),
-    );
-    const frameAttr = this.attr(
-      active ? 'activeBorder' : 'inactiveBorder',
-      cyan ? (active ? 0x3f : 0x37) : active ? 0x1f : 0x17,
-    );
+    const group = windowColorGroup(window.kind);
+    const textAttr = this.attr(`${group}NormalText`, window.kind === 'output' ? 0x07 : 0x1e);
+    const frameAttr = this.attr(`${group}${active ? 'Active' : 'Inactive'}Border`, 0x1f);
+    const titleAttr = this.attr(`${group}${active ? 'Active' : 'Inactive'}Title`, frameAttr);
+    const icons = this.attr(`${group}Icons`, 0x1a);
     this.shadow(r.x, r.y, r.w, r.h);
     b.fill(r.x, r.y, r.w, r.h, ' ', textAttr);
     b.box(r.x, r.y, r.w, r.h, active, frameAttr);
@@ -835,15 +830,15 @@ export class Application {
       r.x + Math.max(6, Math.floor((r.w - title.length) / 2)),
       r.y,
       title.slice(0, r.w - 15),
-      frameAttr,
+      titleAttr,
     );
-    b.text(r.x + r.w - 7, r.y, String(window.id), frameAttr);
+    b.text(r.x + r.w - 7, r.y, String(window.id), titleAttr);
     if (active) {
       b.text(r.x + 2, r.y, '[■]', frameAttr);
-      b.set(r.x + 3, r.y, '■', this.attr('icons', cyan ? 0x3a : 0x1a));
+      b.set(r.x + 3, r.y, '■', icons);
       b.text(r.x + r.w - 5, r.y, `[${window.restore ? '↕' : '↑'}]`, frameAttr);
-      b.set(r.x + r.w - 4, r.y, window.restore ? '↕' : '↑', this.attr('icons', cyan ? 0x3a : 0x1a));
-      b.text(r.x + r.w - 2, r.y + r.h - 1, '─┘', this.attr('icons', cyan ? 0x3a : 0x1a));
+      b.set(r.x + r.w - 4, r.y, window.restore ? '↕' : '↑', icons);
+      b.text(r.x + r.w - 2, r.y + r.h - 1, '─┘', icons);
     }
     if (window.editor) {
       const editor = window.editor;
@@ -881,10 +876,7 @@ export class Application {
             const width = ch === '\t' ? this.settings.tabSize - (col % this.settings.tabSize) : 1;
             const selected = offset + index >= selection.from && offset + index < selection.to;
             const role = layout.roles[offset + index] ?? 'normal';
-            const token =
-              role === 'identifier' && this.settings.identifierColor === 'yellow'
-                ? 0x1e
-                : this.attr(role, PYTHON_TOKEN_ATTRIBUTES[role]);
+            const token = this.attr(role, PYTHON_TOKEN_ATTRIBUTES[role]);
             const attr = selected ? this.attr('selection', 0x71) : (bar ?? token);
             for (let part = 0; part < width; part++) {
               const x = r.x + 1 + col + part - editor.scrollX;
@@ -908,8 +900,8 @@ export class Application {
           frameAttr,
         );
         if (r.w > 24)
-          this.drawScrollBar(r.x + 18, r.y + r.h - 1, r.w - 20, editor.scrollX, maxX, false);
-        this.drawScrollBar(r.x + r.w - 1, r.y + 1, r.h - 2, editor.scrollY, maxY, true);
+          this.drawScrollBar(r.x + 18, r.y + r.h - 1, r.w - 20, editor.scrollX, maxX, false, group);
+        this.drawScrollBar(r.x + r.w - 1, r.y + 1, r.h - 2, editor.scrollY, maxY, true, group);
       }
     } else {
       const lines = this.windowLines(window);
@@ -925,17 +917,18 @@ export class Application {
           window.kind === 'messages'
             ? lineIndex === this.errorIndex
             : ['watch', 'project'].includes(window.kind) && lineIndex === (window.selected ?? 0);
-        if (selected) b.fill(r.x + 1, r.y + 1 + index, r.w - 2, 1, ' ', 0x21);
+        const marked = this.attr(`${group}MarkedText`, 0x2b);
+        if (selected) b.fill(r.x + 1, r.y + 1 + index, r.w - 2, 1, ' ', marked);
         b.text(
           r.x + 1,
           r.y + 1 + index,
           Array.from(lines[lineIndex])
             .slice(0, r.w - 2)
             .join(''),
-          selected ? 0x21 : textAttr,
+          selected ? marked : textAttr,
         );
       }
-      if (active) this.drawScrollBar(r.x + r.w - 1, r.y + 1, r.h - 2, scrollY, maxY, true);
+      if (active) this.drawScrollBar(r.x + r.w - 1, r.y + 1, r.h - 2, scrollY, maxY, true, group);
     }
   }
 
@@ -963,10 +956,11 @@ export class Application {
     position: number,
     maximum: number,
     vertical: boolean,
+    group = 'edit',
   ): void {
     const b = this.buffer;
-    const page = this.attr('scrollbar', 0x13);
-    const control = this.attr('thumb', 0x31);
+    const page = this.attr(`${group}ScrollBar`, 0x13);
+    const control = this.attr(`${group}Arrows`, 0x31);
     for (let index = 0; index < length; index++)
       b.set(x + (vertical ? 0 : index), y + (vertical ? index : 0), maximum > 0 ? '▒' : '▓', page);
     if (maximum <= 0 || length < 3) return;
@@ -979,7 +973,12 @@ export class Application {
     );
     const thumb =
       1 + Math.round((Math.max(0, Math.min(maximum, position)) / maximum) * (length - 3));
-    b.set(x + (vertical ? 0 : thumb), y + (vertical ? thumb : 0), '■', control);
+    b.set(
+      x + (vertical ? 0 : thumb),
+      y + (vertical ? thumb : 0),
+      '■',
+      this.attr(`${group}ThumbTab`, 0x31),
+    );
   }
 
   private menuIndex = 1;
@@ -1011,25 +1010,39 @@ export class Application {
   private drawMenu(menu: OpenMenu): void {
     const b = this.buffer;
     const height = menu.items.length + 2;
-    const normal = this.attr('menu', 0x70);
-    const selectedAttr = this.attr('selectedMenu', 0x20);
+    const normal = this.attr('pulldownNormalText', 0x70);
+    const selectedAttr = this.attr('pulldownSelectionBar', 0x20);
+    const border = this.attr('pulldownBorder', 0x70);
     this.shadow(menu.x, menu.y, menu.width, height);
     b.fill(menu.x, menu.y, menu.width, height, ' ', normal);
-    b.box(menu.x + 1, menu.y, menu.width - 2, height, false, normal);
+    b.box(menu.x + 1, menu.y, menu.width - 2, height, false, border);
     menu.items.forEach((item, index) => {
       const y = menu.y + 1 + index;
       if (item.label === '-') {
-        b.text(menu.x + 1, y, `├${'─'.repeat(menu.width - 4)}┤`, normal);
+        b.text(menu.x + 1, y, `├${'─'.repeat(menu.width - 4)}┤`, border);
         return;
       }
       const selected = index === menu.selected;
       const attr = item.disabled
-        ? ((selected ? selectedAttr : normal) & 0xf0) | 8
+        ? selected
+          ? (selectedAttr & 0xf0) | (this.attr('pulldownDisabledEntry', 0x78) & 15)
+          : this.attr('pulldownDisabledEntry', 0x78)
         : selected
           ? selectedAttr
           : normal;
       if (selected) b.fill(menu.x + 2, y, menu.width - 4, 1, ' ', attr);
-      this.hotText(menu.x + 3, y, item.label, attr, item.disabled ? attr : (attr & 0xf0) | 4);
+      this.hotText(
+        menu.x + 3,
+        y,
+        item.label,
+        attr,
+        item.disabled
+          ? attr
+          : this.attr(
+              selected ? 'pulldownSelectedLetter' : 'pulldownFirstLetter',
+              selected ? 0x24 : 0x74,
+            ),
+      );
       if (item.shortcut)
         b.text(menu.x + menu.width - 3 - item.shortcut.length, y, item.shortcut, attr);
       if (item.children) b.set(menu.x + menu.width - 4, y, '►', attr);
@@ -1067,7 +1080,13 @@ export class Application {
     message: string[],
     fields: Field[],
     onSubmit: DialogState['onSubmit'],
-    options: { list?: string[]; buttons?: string[]; width?: number; kind?: 'colors' } = {},
+    options: {
+      list?: string[];
+      buttons?: string[];
+      width?: number;
+      kind?: 'colors';
+      colors?: Record<string, number>;
+    } = {},
   ): void {
     this.menuStack = [];
     this.menuFocused = false;
@@ -1082,6 +1101,15 @@ export class Application {
       width: options.width ?? 58,
       fieldIndex: 0,
       kind: options.kind,
+      colors:
+        options.kind === 'colors'
+          ? {
+              group: 0,
+              item: 0,
+              focus: 'group',
+              values: options.colors ?? { ...this.settings.colors },
+            }
+          : undefined,
       buttonRects: [],
       fieldRows: [],
       listTop: 0,
@@ -1160,6 +1188,7 @@ export class Application {
       label.append(control);
       form.append(label);
     });
+    if (dialog.colors) this.colorControls(form, dialog.colors);
     if (dialog.list) {
       const label = document.createElement('label');
       label.textContent = 'Files';
@@ -1185,6 +1214,10 @@ export class Application {
       button.dataset.focusKey = `button-${choice}`;
       button.type = 'button';
       button.textContent = label;
+      button.addEventListener('focus', () => {
+        if (dialog.colors) dialog.colors.focus = `button-${choice}`;
+        this.dirty = true;
+      });
       button.addEventListener('click', () => this.submitDialog(choice));
       form.append(button);
     });
@@ -1193,6 +1226,12 @@ export class Application {
       this.submitDialog(0);
     });
     this.dialogMirror.append(form);
+    if (dialog.colors?.help) {
+      const help = document.createElement('p');
+      help.textContent =
+        'Tab changes controls. Arrow keys choose colors. OK saves; Cancel or Escape discards changes.';
+      form.append(help);
+    }
     const first =
       (previousKey ? form.querySelector<HTMLElement>(`[data-focus-key="${previousKey}"]`) : null) ??
       form.querySelector<HTMLElement>('input, select, button');
@@ -1215,6 +1254,161 @@ export class Application {
         child.inert = active;
   }
 
+  private colorControls(form: HTMLFormElement, state: ColorDialogState): void {
+    const item = selectedColorItem(state);
+    const current = this.attr(item.key, item.attr);
+    const choices: Array<[string, string[], number, number]> = [
+      ['Group', COLOR_GROUPS.map((group) => group.label), state.group, 14],
+      ['Item', COLOR_GROUPS[state.group].items.map((entry) => entry.label), state.item, 14],
+      ['Foreground', COLOR_NAMES, current & 15, 1],
+      ['Background', COLOR_NAMES.slice(0, 8), current >> 4, 1],
+    ];
+    for (const [name, entries, selected, size] of choices) {
+      const label = document.createElement('label');
+      label.textContent = name;
+      const control = document.createElement('select');
+      control.setAttribute('aria-label', name);
+      const key = name.toLowerCase();
+      control.dataset.focusKey = key;
+      control.size = size;
+      entries.forEach((name, index) => {
+        const option = document.createElement('option');
+        option.textContent = name;
+        option.value = String(index);
+        control.append(option);
+      });
+      control.value = String(selected);
+      control.addEventListener('focus', () => {
+        state.focus = key;
+        this.dirty = true;
+      });
+      control.addEventListener('change', () => this.changeColorControl(key, Number(control.value)));
+      label.append(control);
+      form.append(label);
+    }
+  }
+
+  private changeColorControl(key: string, value: number): void {
+    const state = this.dialog?.colors;
+    if (!state || !Number.isInteger(value)) return;
+    if (key === 'group') {
+      state.group = Math.max(0, Math.min(COLOR_GROUPS.length - 1, value));
+      state.item = 0;
+    } else if (key === 'item') {
+      state.item = Math.max(0, Math.min(COLOR_GROUPS[state.group].items.length - 1, value));
+    } else {
+      const item = selectedColorItem(state);
+      const attr = this.attr(item.key, item.attr);
+      if (key === 'foreground' && value >= 0 && value < 16)
+        state.values[item.key] = (attr & 0xf0) | value;
+      if (key === 'background' && value >= 0 && value < 8)
+        state.values[item.key] = (value << 4) | (attr & 15);
+    }
+    this.syncDialogMirror();
+    this.dirty = true;
+  }
+
+  private colorKey(event: KeyboardEvent): void {
+    const state = this.dialog?.colors;
+    if (!state) return;
+    const key = event.key;
+    if (event.altKey) {
+      const button = ({ o: 0, c: 1, h: 2 } as Record<string, number>)[key.toLowerCase()];
+      if (button !== undefined) {
+        event.preventDefault();
+        this.submitDialog(button);
+        return;
+      }
+      const focus = (
+        { g: 'group', i: 'item', f: 'foreground', b: 'background' } as Record<string, string>
+      )[key.toLowerCase()];
+      if (focus) {
+        event.preventDefault();
+        this.dialogMirror.querySelector<HTMLElement>(`[data-focus-key="${focus}"]`)?.focus();
+      }
+      return;
+    }
+    if (key === 'F1') {
+      event.preventDefault();
+      this.submitDialog(2);
+      return;
+    }
+    if (key === 'Enter' && !(event.target instanceof HTMLButtonElement)) {
+      event.preventDefault();
+      this.submitDialog(0);
+      return;
+    }
+    const focus = state.focus;
+    if (!['group', 'item', 'foreground', 'background'].includes(focus)) return;
+    const grid = focus === 'foreground' || focus === 'background';
+    const item = selectedColorItem(state);
+    const attr = this.attr(item.key, item.attr);
+    const current =
+      focus === 'group'
+        ? state.group
+        : focus === 'item'
+          ? state.item
+          : focus === 'foreground'
+            ? attr & 15
+            : attr >> 4;
+    const length =
+      focus === 'group'
+        ? COLOR_GROUPS.length
+        : focus === 'item'
+          ? COLOR_GROUPS[state.group].items.length
+          : focus === 'foreground'
+            ? 16
+            : 8;
+    const delta = (
+      {
+        ArrowUp: grid ? -4 : -1,
+        ArrowDown: grid ? 4 : 1,
+        ArrowLeft: -1,
+        ArrowRight: 1,
+        PageUp: -14,
+        PageDown: 14,
+      } as Record<string, number>
+    )[key];
+    if (delta !== undefined || key === 'Home' || key === 'End') {
+      event.preventDefault();
+      this.changeColorControl(
+        focus,
+        key === 'Home'
+          ? 0
+          : key === 'End'
+            ? length - 1
+            : Math.max(0, Math.min(length - 1, current + (delta ?? 0))),
+      );
+    }
+  }
+
+  private colorPointer(x: number, y: number): void {
+    const state = this.dialog?.colors;
+    if (!state) return;
+    const layout = colorDialogRects(this.buffer.cols, this.buffer.rows);
+    for (const key of ['group', 'item', 'foreground', 'background'] as const) {
+      const rect = layout[key];
+      if (!this.contains(rect, x, y)) continue;
+      let value: number;
+      if (key === 'group' || key === 'item') {
+        const length =
+          key === 'group' ? COLOR_GROUPS.length : COLOR_GROUPS[state.group].items.length;
+        const current = key === 'group' ? state.group : state.item;
+        value =
+          x === rect.x + rect.w - 1 && length > rect.h
+            ? y === rect.y
+              ? current - 1
+              : y === rect.y + rect.h - 1
+                ? current + 1
+                : Math.round(((y - rect.y) / (rect.h - 1)) * (length - 1))
+            : Math.min(length - 1, colorListStart(current, length) + y - rect.y);
+      } else value = (y - rect.y) * 4 + Math.floor((x - rect.x) / 3);
+      this.changeColorControl(key, value);
+      this.dialogMirror.querySelector<HTMLElement>(`[data-focus-key="${key}"]`)?.focus();
+      return;
+    }
+  }
+
   private dismissDialog(): void {
     this.dialog = undefined;
     this.dialogMirror.replaceChildren();
@@ -1235,6 +1429,14 @@ export class Application {
   private submitDialog(choice: number): void {
     const dialog = this.dialog;
     if (!dialog || choice < 0 || choice >= dialog.buttons.length) return;
+    if (dialog.colors && choice === 2) {
+      dialog.colors.help = true;
+      this.syncDialogMirror();
+      this.announce(
+        'Choose Group and Item, then Foreground and Background. Tab changes controls; arrow keys choose colors. OK saves; Cancel discards.',
+      );
+      return;
+    }
     let previousEditor = this.editor;
     let previousCursor = previousEditor?.cursor;
     let previousText = previousEditor?.text;
@@ -1297,8 +1499,8 @@ export class Application {
       return;
     }
     const b = this.buffer;
-    const normal = this.attr('dialog', 0x70);
-    const frame = this.attr('dialog', 0x7f);
+    const normal = this.attr('dialogNormalText', 0x70);
+    const frame = this.attr('dialogActiveBorder', 0x7f);
     const width = Math.min(dialog.width, b.cols - 4);
     const listHeight = dialog.list ? Math.min(7, Math.max(2, dialog.list.length)) + 1 : 0;
     const height = Math.min(
@@ -1311,9 +1513,14 @@ export class Application {
     this.shadow(x, y, width, height);
     b.fill(x, y, width, height, ' ', normal);
     b.box(x, y, width, height, true, frame);
-    b.text(x + Math.floor((width - dialog.title.length - 2) / 2), y, ` ${dialog.title} `, frame);
+    b.text(
+      x + Math.floor((width - dialog.title.length - 2) / 2),
+      y,
+      ` ${dialog.title} `,
+      this.attr('dialogActiveTitle', 0x7f),
+    );
     b.text(x + 2, y, '[■]', frame);
-    b.set(x + 3, y, '■', this.attr('icons', 0x7a));
+    b.set(x + 3, y, '■', this.attr('dialogIcons', 0x7a));
     let row = y + 2;
     for (const line of dialog.message)
       if (row < y + height - 3) b.text(x + 3, row++, line.slice(0, width - 6), normal);
@@ -1325,18 +1532,41 @@ export class Application {
         x + 3,
         row,
         field.label.slice(0, width - 6),
-        index === dialog.fieldIndex ? frame : normal,
+        this.attr(
+          index === dialog.fieldIndex ? 'controlInactiveTitle' : 'controlActiveTitle',
+          index === dialog.fieldIndex ? 0x7f : 0x70,
+        ),
       );
-      b.set(x + 3, row, field.label[0] ?? ' ', (normal & 0xf0) | 14);
+      b.set(x + 3, row, field.label[0] ?? ' ', this.attr('controlFirstLetter', 0x7e));
       row++;
       if (field.type === 'checkbox')
-        b.text(x + 3, row, ` [${field.value === 'true' ? 'X' : ' '}] `, 0x30);
+        b.text(
+          x + 3,
+          row,
+          ` [${field.value === 'true' ? 'X' : ' '}] `,
+          this.attr(
+            index === dialog.fieldIndex ? 'clusterSelected' : 'clusterActive',
+            index === dialog.fieldIndex ? 0x3f : 0x30,
+          ),
+        );
       else if (field.type === 'select') {
-        b.fill(x + 3, row, width - 6, 1, ' ', 0x30);
-        b.text(x + 4, row, `${field.value}  ▼`.slice(0, width - 8), 0x3f);
+        b.fill(x + 3, row, width - 6, 1, ' ', this.attr('listActive', 0x30));
+        b.text(
+          x + 4,
+          row,
+          `${field.value}  ▼`.slice(0, width - 8),
+          this.attr(
+            index === dialog.fieldIndex ? 'listSelected' : 'listActive',
+            index === dialog.fieldIndex ? 0x2f : 0x30,
+          ),
+        );
       } else {
-        b.fill(x + 3, row, width - 6, 1, ' ', 0x1f);
-        b.text(x + 3, row, field.value.slice(-(width - 7)), 0x1f);
+        const fieldAttr = this.attr(
+          index === dialog.fieldIndex ? 'inputSelectedText' : 'inputNormalText',
+          index === dialog.fieldIndex ? 0x1f : 0x1b,
+        );
+        b.fill(x + 3, row, width - 6, 1, ' ', fieldAttr);
+        b.text(x + 3, row, field.value.slice(-(width - 7)), fieldAttr);
         b.text(x + width - 5, row, '▐↓▌', 0x72);
       }
       row++;
@@ -1350,13 +1580,9 @@ export class Application {
         );
         const listIndex = start + index;
         const selected = listIndex === dialog.selected;
-        b.fill(x + 3, row, width - 6, 1, ' ', selected ? 0x2f : 0x30);
-        b.text(
-          x + 4,
-          row++,
-          (dialog.list[listIndex] ?? '').slice(0, width - 8),
-          selected ? 0x2f : 0x30,
-        );
+        const attr = this.attr(selected ? 'listSelected' : 'listActive', selected ? 0x2f : 0x30);
+        b.fill(x + 3, row, width - 6, 1, ' ', attr);
+        b.text(x + 4, row++, (dialog.list[listIndex] ?? '').slice(0, width - 8), attr);
       }
     dialog.buttonRects = [];
     let buttonX =
@@ -1365,8 +1591,18 @@ export class Application {
     dialog.buttons.forEach((button, index) => {
       const w = button.length + 4;
       dialog.buttonRects.push({ x: buttonX, y: y + height - 3, w, h: 1 });
-      b.fill(buttonX, y + height - 3, w, 1, ' ', 0x20);
-      b.text(buttonX + 2, y + height - 3, button, index === 0 ? 0x2b : 0x20);
+      const focused =
+        typeof document !== 'undefined' &&
+        this.dialogMirror?.querySelector(`[data-focus-key="button-${index}"]`) ===
+          document.activeElement;
+      const role = focused ? 'Selected' : index === 0 ? 'Default' : 'Active';
+      b.fill(buttonX, y + height - 3, w, 1, ' ', this.attr('buttonActive', 0x20));
+      b.text(
+        buttonX + 2,
+        y + height - 3,
+        button,
+        this.attr(`button${role}`, index === 0 ? 0x2b : 0x20),
+      );
       if (this.settings.videoMode !== 'monochrome') {
         b.set(buttonX + w, y + height - 3, '▄', normal);
         b.text(buttonX + 1, y + height - 2, '▀'.repeat(w), normal);
@@ -1376,52 +1612,15 @@ export class Application {
   }
 
   private drawColors(dialog: DialogState): void {
-    const b = this.buffer;
-    const normal = this.attr('dialog', 0x70);
-    const frame = this.attr('dialog', 0x7f);
-    const width = Math.min(70, b.cols - 4);
-    const height = Math.min(22, b.rows - 2);
-    const x = Math.floor((b.cols - width) / 2);
-    const y = Math.max(1, Math.floor((b.rows - height) / 2));
-    dialog.rect = { x, y, w: width, h: height };
-    this.shadow(x, y, width, height);
-    b.fill(x, y, width, height, ' ', normal);
-    b.box(x, y, width, height, true, frame);
-    b.text(x + Math.floor(width / 2) - 4, y, ' Colors ', frame);
-    b.text(x + 2, y, '[■]', frame);
-    b.set(x + 3, y, '■', this.attr('icons', 0x7a));
-    b.text(x + 3, y + 2, 'Group / Item', (normal & 0xf0) | 14);
-    b.text(x + 32, y + 2, 'Foreground', (normal & 0xf0) | 14);
-    b.text(x + 48, y + 2, 'Background', (normal & 0xf0) | 14);
-    const roles = Object.keys(COLOR_ROLES);
-    const visible = height - 8;
-    const start = Math.max(0, dialog.selected - visible + 1);
-    this.colorRole = roles[dialog.selected] ?? 'identifier';
-    for (let index = 0; index < visible; index++) {
-      const role = roles[start + index];
-      if (!role) break;
-      const attr = role === this.colorRole ? 0x2f : 0x30;
-      b.fill(x + 3, y + 3 + index, 26, 1, ' ', attr);
-      b.text(x + 4, y + 3 + index, role, attr);
-    }
-    const attr = this.attr(this.colorRole, COLOR_ROLES[this.colorRole]);
-    for (let color = 0; color < 16; color++) {
-      const xx = x + 33 + (color % 4) * 3;
-      const yy = y + 4 + Math.floor(color / 4);
-      b.text(xx, yy, color === (attr & 15) ? ' • ' : '   ', (color << 4) | (color < 7 ? 15 : 0));
-    }
-    for (let color = 0; color < 8; color++) {
-      const xx = x + 49 + (color % 4) * 3;
-      const yy = y + 4 + Math.floor(color / 4);
-      b.text(xx, yy, color === attr >> 4 ? ' • ' : '   ', (color << 4) | (color < 7 ? 15 : 0));
-    }
-    b.fill(x + 32, y + 11, width - 35, 3, ' ', attr);
-    b.text(x + 36, y + 12, 'Text Text', attr);
-    b.text(x + 3, y + height - 5, '↑↓ Item   ←→ Foreground   Shift+←→ Background', normal);
-    dialog.buttonRects = [{ x: x + width - 14, y: y + height - 3, w: 10, h: 1 }];
-    b.text(x + width - 14, y + height - 3, '    OK    ', 0x2b);
-    if (this.settings.videoMode !== 'monochrome')
-      b.text(x + width - 13, y + height - 2, '▀'.repeat(10), normal);
+    if (!dialog.colors) return;
+    const layout = drawColorDialog(
+      this.buffer,
+      dialog.colors,
+      (key, fallback) => this.attr(key, fallback),
+      this.settings.videoMode !== 'monochrome',
+    );
+    dialog.rect = layout.rect;
+    dialog.buttonRects = layout.buttons;
   }
 
   private async command(command: string): Promise<void> {
@@ -1848,17 +2047,20 @@ export class Application {
       case 'editor-options':
         this.editorOptions();
         break;
-      case 'colors':
+      case 'colors': {
+        const values = { ...this.settings.colors };
         this.openDialog(
           'Colors',
           [],
           [],
           async () => {
+            this.settings.colors = values;
             await this.saveSettings();
           },
-          { buttons: ['OK'], kind: 'colors' },
+          { buttons: ['OK', 'Cancel', 'Help'], kind: 'colors', colors: values },
         );
         break;
+      }
       case 'mouse-options':
         this.openDialog(
           'Mouse',
@@ -2667,21 +2869,7 @@ export class Application {
         return;
       }
       if (dialog.kind === 'colors') {
-        event.preventDefault();
-        const roles = Object.keys(COLOR_ROLES);
-        if (key === 'ArrowUp' || key === 'ArrowDown')
-          dialog.selected =
-            (dialog.selected + (key === 'ArrowUp' ? -1 : 1) + roles.length) % roles.length;
-        this.colorRole = roles[dialog.selected];
-        if (key === 'ArrowLeft' || key === 'ArrowRight') {
-          const step = key === 'ArrowLeft' ? -1 : 1;
-          const attr = this.attr(this.colorRole, COLOR_ROLES[this.colorRole]);
-          this.settings.colors[this.colorRole] = event.shiftKey
-            ? ((((attr >> 4) + step + 8) % 8) << 4) | (attr & 15)
-            : (attr & 0xf0) | ((attr + step + 16) % 16);
-        }
-        if (key === 'Enter') this.submitDialog(0);
-        this.dirty = true;
+        this.colorKey(event);
         return;
       }
       if (key === 'F1') {
@@ -2991,7 +3179,7 @@ export class Application {
     this.announce(lines[selected]);
   }
 
-  private point(event: PointerEvent): { x: number; y: number } {
+  private point(event: MouseEvent): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect();
     return {
       x: Math.floor(((event.clientX - rect.left) / rect.width) * this.buffer.cols),
@@ -3035,18 +3223,7 @@ export class Application {
         return;
       }
       if (dialog.kind === 'colors') {
-        const visible = r.h - 8;
-        const start = Math.max(0, dialog.selected - visible + 1);
-        if (x >= r.x + 3 && x <= r.x + 29 && y >= r.y + 3 && y < r.y + 3 + visible)
-          dialog.selected = Math.min(Object.keys(COLOR_ROLES).length - 1, start + y - r.y - 3);
-        this.colorRole = Object.keys(COLOR_ROLES)[dialog.selected];
-        const attr = this.attr(this.colorRole, COLOR_ROLES[this.colorRole]);
-        if (x >= r.x + 33 && x < r.x + 45 && y >= r.y + 4 && y < r.y + 8)
-          this.settings.colors[this.colorRole] =
-            (attr & 0xf0) | ((y - r.y - 4) * 4 + Math.floor((x - r.x - 33) / 3));
-        if (x >= r.x + 49 && x < r.x + 61 && y >= r.y + 4 && y < r.y + 6)
-          this.settings.colors[this.colorRole] =
-            (attr & 15) | (((y - r.y - 4) * 4 + Math.floor((x - r.x - 49) / 3)) << 4);
+        this.colorPointer(x, y);
       } else {
         const index = dialog.fieldRows.findIndex((row) => y === row || y === row + 1);
         if (index >= 0) {

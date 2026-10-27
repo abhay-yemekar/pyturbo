@@ -12,6 +12,7 @@ completed implementation or verification.
 | GitHub identity       | Personal account `abhay-yemekar`; office credentials remain separate          |
 | Hosting design        | Free Cloudflare Pages, Git integration, `main` production branch and previews |
 | Default screen        | Exact 80×25 with side bars; Fill available                                    |
+| Native cell size      | Keep the plan's 9×16 cells and 720×400 canvas; reconsider only with the owner |
 | Identifiers           | Factory light green; Classic Yellow preset                                    |
 | Phones                | Landscape, exact look and touch controls                                      |
 | Pause after run       | Off by default; optional setting                                              |
@@ -23,6 +24,9 @@ completed implementation or verification.
 The five open product defaults were confirmed together on 26 October 2026. The
 repository owner was named directly in the implementation request. New product
 choices and stack deviations require confirmation before implementation.
+On 27 October the owner reaffirmed the 9×16 target after learning that the
+reference emulator renders 8×16 cells at 640×400 with some different glyph shapes.
+The emulator's bitmap dimensions do not replace the agreed PyTurbo target.
 
 ## Available dependency pins
 
@@ -54,7 +58,8 @@ The owner also approved `issues: write` for the release workflow's labeling need
 
 ## Reference questions still open
 
-IDE-only palette defaults, selected-disabled menu color, full golden screens,
+The twenty IDE color groups and their defaults have now been transcribed from
+private lossless reference captures. Selected-disabled menu color, full golden screens,
 actual browser/OS keyboard capture, and detailed Ctrl+O T/U/F/R semantics still
 need reference evidence. See [fidelity status](fidelity-status.md) and
 [editor details](editor-and-storage.md). No alternate semantics were silently

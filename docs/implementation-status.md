@@ -25,8 +25,9 @@ commands may use simplified interactions rather than complete Turbo parity.
 ## Verification record
 
 - Whole-project lint and strict TypeScript checks pass.
-- All **43 unit tests** pass. V8 coverage reports 61.42% statements and 63.48%
-  lines for the configured coverage scope; it does not cover the entire IDE.
+- All **48 unit tests** pass locally, including the new reference palettes,
+  legacy color preferences and independent window roles. Coverage is measured
+  separately for the configured scope; it does not cover the entire IDE.
 - The production build and PWA generation pass. Production preview applies the
   same CSP and isolation headers as the Pages `_headers` file. Development alone
   allows Vite's injected styles and localhost WebSocket connection.
@@ -79,14 +80,15 @@ debugger evaluation/resume and Stop during input/debugger waits.
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
 only PyTurbo issues/PRs, and uses this repository as its default. Issue #1 is in
-progress and PR #2 is in review. Private visibility was verified after reload.
+progress and PR #2 has been merged. Private visibility was verified after reload.
 
 The owner approved the
 repository-level Actions permission needed for release PR creation; it is enabled
 while default workflow token permissions remain read-only.
-The first automated release proposal incorrectly selected `1.0.0`; it remains
-unmerged and in draft. Issue #10 adds the explicit initial version `0.1.0`.
-No v1 release has been published.
+The first automated release proposal incorrectly selected `1.0.0`. PR #11 fixed
+the initial version to `0.1.0`; PR #15 fixed generated-file lint and human-triggered
+PR checks. The updated proposal passes all five required jobs, CodeQL and Pages
+and remains an unpublished draft. No v1 release has been published.
 
 Record final command results in the PR validation record or update this file.
 Successful builds and small geometry fixtures do not certify the whole product.
