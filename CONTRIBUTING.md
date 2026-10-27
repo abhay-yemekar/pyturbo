@@ -41,7 +41,8 @@ office credentials separate and leave global Git/SSH configuration unchanged.
 
 ## Releases
 
-Release-please proposes version/changelog PRs. Versions remain `0.x` during
+Release-please proposes version/changelog PRs, starting explicitly at `0.1.0`.
+Versions remain `0.x` during
 development; breaking changes increment the minor version until the planned v1
 launch. Changelog author attribution is disabled. Merging a release PR is a
 separate maintainer decision after its checks pass.
