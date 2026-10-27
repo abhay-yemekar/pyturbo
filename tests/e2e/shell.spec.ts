@@ -192,12 +192,15 @@ test('applies independent symbol and menu colours from the Colors dialog', async
   await page.keyboard.press('Alt+o');
   await page.keyboard.press('e');
   await page.keyboard.press('c');
-  await expect(page.getByRole('dialog', { name: 'Colors', exact: true })).toBeAttached();
-  for (let index = 0; index < 4; index++) await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowRight');
-  for (let index = 4; index < 22; index++) await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('ArrowRight');
-  await page.keyboard.press('Enter');
+  const colors = page.getByRole('dialog', { name: 'Colors', exact: true });
+  await expect(colors).toBeAttached();
+  await colors.getByLabel('Group', { exact: true }).selectOption({ label: 'Edit Window' });
+  await colors.getByLabel('Item', { exact: true }).selectOption({ label: 'Symbol' });
+  await colors.getByLabel('Foreground', { exact: true }).selectOption({ label: 'White' });
+  await colors.getByLabel('Group', { exact: true }).selectOption({ label: 'Main Menu' });
+  await colors.getByLabel('Item', { exact: true }).selectOption({ label: 'Normal Text' });
+  await colors.getByLabel('Foreground', { exact: true }).selectOption({ label: 'Blue' });
+  await colors.getByRole('button', { name: 'OK', exact: true }).press('Enter');
   await expect(page.getByRole('dialog')).not.toBeAttached();
   const canvas = page.getByRole('img', { name: /VGA desktop/ });
   const hasColour = (x: number, y: number, expected: number[]) =>
@@ -251,4 +254,90 @@ test('suppresses dialog shadows in monochrome mode', async ({ page }) => {
       }),
     )
     .toBe(true);
+});
+
+test('discards cancelled Colors previews and persists accepted choices after reload', async ({
+  page,
+}) => {
+  await shellReady(page);
+  const openColors = async () => {
+    await page.keyboard.press('Alt+o');
+    await page.keyboard.press('e');
+    await page.keyboard.press('c');
+    const dialog = page.getByRole('dialog', { name: 'Colors', exact: true });
+    await expect(dialog).toBeAttached();
+    await dialog.getByLabel('Group', { exact: true }).selectOption({ label: 'Edit Window' });
+    await dialog.getByLabel('Item', { exact: true }).selectOption({ label: 'Identifier' });
+    return dialog;
+  };
+  let dialog = await openColors();
+  await expect(dialog.getByLabel('Foreground', { exact: true })).toHaveValue('10');
+  await dialog.getByLabel('Foreground', { exact: true }).selectOption({ label: 'Light red' });
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).press('Enter');
+  dialog = await openColors();
+  await expect(dialog.getByLabel('Foreground', { exact: true })).toHaveValue('10');
+  await dialog.getByLabel('Foreground', { exact: true }).selectOption({ label: 'White' });
+  await page.keyboard.press('Escape');
+  dialog = await openColors();
+  await expect(dialog.getByLabel('Foreground', { exact: true })).toHaveValue('10');
+  await dialog.getByLabel('Foreground', { exact: true }).selectOption({ label: 'Light red' });
+  await dialog.getByRole('button', { name: 'OK', exact: true }).press('Enter');
+  await page.reload();
+  await expect(page.getByTestId('editor')).toHaveValue(/Code Python like/);
+  dialog = await openColors();
+  await expect(dialog.getByLabel('Foreground', { exact: true })).toHaveValue('12');
+  await page.keyboard.press('Escape');
+});
+
+test('navigates Colors groups, long item lists and grids by keyboard and pointer', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 800, height: 500 });
+  await shellReady(page);
+  await page.keyboard.press('Alt+o');
+  await page.keyboard.press('e');
+  await page.keyboard.press('c');
+  const dialog = page.getByRole('dialog', { name: 'Colors', exact: true });
+  const group = dialog.getByLabel('Group', { exact: true });
+  const item = dialog.getByLabel('Item', { exact: true });
+  await expect(group.locator('option')).toHaveCount(20);
+  await expect(group).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(group).toHaveValue('19');
+  await expect(item.locator('option')).toHaveText(['Desktop Color']);
+  await page.keyboard.press('Home');
+  for (let index = 0; index < 3; index++) await page.keyboard.press('ArrowDown');
+  await expect(item.locator('option')).toHaveCount(24);
+  await page.keyboard.press('Tab');
+  await expect(item).toBeFocused();
+  await page.keyboard.press('End');
+  await expect(item).toHaveValue('23');
+  await page.keyboard.press('ArrowUp');
+  await expect(item).toHaveValue('22');
+  await page.keyboard.press('Alt+f');
+  await page.keyboard.press('ArrowDown');
+  await expect(dialog.getByLabel('Foreground', { exact: true })).toHaveValue('5');
+  await page.keyboard.press('Alt+b');
+  await page.keyboard.press('ArrowUp');
+  await expect(dialog.getByLabel('Background', { exact: true })).toHaveValue('0');
+  const canvas = page.getByRole('img', { name: /VGA desktop/ });
+  const rect = await canvas.boundingBox();
+  if (!rect) throw new Error('Canvas is missing');
+  const clickCell = (x: number, y: number) =>
+    page.mouse.click(rect.x + x * 9 + 2, rect.y + y * 16 + 2);
+  await clickCell(56, 6); // Foreground row 3, first swatch: dark grey.
+  await expect(dialog.getByLabel('Foreground', { exact: true })).toHaveValue('8');
+  await clickCell(62, 12); // Background row 2, third swatch: brown.
+  await expect(dialog.getByLabel('Background', { exact: true })).toHaveValue('6');
+  await page.keyboard.press('F1');
+  await expect(dialog).toBeAttached();
+  const path = testInfo.outputPath('colors-720x400.png');
+  await canvas.screenshot({ path });
+  await testInfo.attach('PyTurbo Colors control geometry; font fidelity separate', {
+    path,
+    contentType: 'image/png',
+  });
+  await page.keyboard.press('Alt+c');
+  await expect(dialog).not.toBeAttached();
+  await expect(page.getByTestId('editor')).toBeFocused();
 });

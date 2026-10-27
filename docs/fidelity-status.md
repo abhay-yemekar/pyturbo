@@ -1,9 +1,9 @@
 # Fidelity and Phase 0 verification
 
-The implementation follows the agreed PyTurbo plan. The original Turbo C++ IDE
-has **not** yet been compared pixel for pixel with this implementation. Passing
-unit tests establish the contracts below; they do not certify overall visual
-fidelity or complete Phase 0.
+The implementation follows the agreed PyTurbo plan. Private original-IDE
+captures now establish color attributes, the Colors group/item order and its
+cell geometry. A complete pixel comparison is still pending. Passing unit tests
+does not certify overall visual fidelity or complete Phase 0.
 
 ## Verified at the engine milestone
 
@@ -32,9 +32,10 @@ fidelity or complete Phase 0.
 - View, Group, Window and Dialog rendering primitives, plus basic Label,
   Button, InputLine and ListBox drawing. These are building blocks; full control
   editing, focus navigation and Turbo dialog interaction require integration.
-- The default application/editor palettes are transcribed from the plan. The
-  plan's IDE-specific Output/Message/Watch/Help defaults and selected-disabled
-  menu colour remain subject to reference verification.
+- The generic application/editor tables remain transcribed from the plan.
+  IDE-specific defaults are now separately recorded in `src/ide/colors.ts`,
+  following direct reference observation below. Selected-disabled menu color
+  still requires a dedicated reference check.
 - COOP/COEP headers are configured in Vite development/preview and Pages
   `_headers`. The Pages preview response headers, CDN loading, live input,
   Stop and debugger checks pass; evidence is in `implementation-status.md`.
@@ -74,11 +75,47 @@ fidelity or complete Phase 0.
   clearly marked as unapproved for original-IDE fidelity. Native shell PNGs
   from Playwright are also evidence of current output, not approved references.
 
-The Colors dialog still uses a flat list of the implemented roles. It does not
-yet reproduce the original group hierarchy or every independently configurable
-Turbo control palette. The original monochrome focus-marker behavior, complete
-control focus/pressed states and narrow-screen dialog geometry still need
-reference and usability verification.
+## Original Colors and window palettes, 27 October 2026
+
+The owner authorized the reference emulator at [turboc.pages.dev](https://turboc.pages.dev)
+and anonymous Playwright PNG captures. Captures remain in ignored local storage;
+no reference screenshots, program or binaries are committed or shipped. Native
+compositor captures were aligned to integer CSS coordinates to avoid fractional
+cropping. Direct WebGL exports were blank and were not used as reference evidence.
+
+- All **20 groups** were inspected, including the off-screen Dialog Messages,
+  Buttons, Text Entry, Lists, Groups and Desktop Color entries. The selected
+  item's `TEXT TEXT` sample establishes foreground/background bytes. Source
+  transcription is separate from the generic Turbo Vision application palette.
+- Output uses inactive title/border `07`, active title/border `0F`, icons `0A`.
+  Message/Watch/Project/Inspector use inactive title/border `31`, marked text
+  `2B`, active title/border `3F`, icons `3A`. Help uses normal text `30`, inactive
+  title/border `30`, scrollbar `31`, and thumb/arrows `13`.
+- The Colors dialog is 64×22 cells at `(8, 1)` in 80×25 mode, with separate
+  Group and Item lists, 4×4 foreground and 4×2 background swatches, a sample,
+  and OK/Cancel/Help. Long lists scroll independently. Accessible native controls
+  mirror the canvas; edits preview in a draft, Cancel/Escape discard it, and OK
+  persists it. Previously saved flat-role colors remain readable.
+- Window titles, borders, icons, scrollbar track, thumb and arrows have distinct
+  keys. Editing an editor role no longer changes unrelated window palettes.
+  The original groups include roles for help links, modal help and other states
+  that still need full UI implementations; those settings are retained without
+  claiming those features are complete.
+- The reference emulator produces **640×400, 8×16 cells**. Some glyphs differ
+  from the licensed 9×16 font. The owner confirmed keeping **720×400, 9×16** on
+  27 October. Cell geometry and palette verification do not establish equality
+  between these different bitmap fonts or approve a complete visual baseline.
+
+The original monochrome focus markers, complete control focus/pressed states,
+dialog templates and narrow-screen usability still need reference and device
+verification.
+
+![PyTurbo's own Colors dialog at the agreed 720×400 size](images/colors.png)
+
+Local lint, typecheck, 48 unit tests and the production build pass. All 81
+shell/editor browser cases pass across Chromium, Firefox and Playwright WebKit.
+After the final picker-frame correction, all nine targeted Colors cases pass
+again across those engines. The PR must also pass the complete runtime suite.
 
 ## Reference comparison still required
 
