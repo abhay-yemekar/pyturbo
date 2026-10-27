@@ -25,7 +25,7 @@ commands may use simplified interactions rather than complete Turbo parity.
 ## Verification record
 
 - Whole-project lint and strict TypeScript checks pass.
-- All **48 unit tests** pass locally, including the new reference palettes,
+- All **50 unit tests** pass locally, including the new reference palettes,
   legacy color preferences and independent window roles. Coverage is measured
   separately for the configured scope; it does not cover the entire IDE.
 - The production build and PWA generation pass. Production preview applies the
@@ -76,6 +76,21 @@ COOP/COEP headers and the same application bundle as the verified preview.
 All five Chromium runtime smoke checks also pass on the production origin
 (49.6 seconds total): Python execution, UTF-8 input, infinite-loop recovery,
 debugger evaluation/resume and Stop during input/debugger waits.
+
+PR #26 replaced repeated Ubuntu browser-library downloads with the official,
+version-matched Playwright image pinned by digest. It runs as the image's
+non-root browser user, retaining Node 24, pnpm 12.15.0, all three test engines,
+required checks, token permissions and the 30-minute ceiling. All 123 browser
+cases passed in the corrected CI setup. PR #19's artifact action update then
+passed all checks and was merged with an explicit attribution-free message.
+
+PR #24 passed all **129 browser cases**, the other required jobs, CodeQL and
+Pages on its final combined revision and was merged as `54e0df4`. Production
+serves the new palette bundle with HTTP 200 and isolation headers. All **eight
+production Chromium smoke cases** pass (37.9 seconds): the five runtime checks
+above plus independent Colors choices, cancellation/persistence and keyboard/
+pointer interaction. The menu-row correction has 15 local browser checks across
+the three engines; its complete CI suite remains required before merge.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports

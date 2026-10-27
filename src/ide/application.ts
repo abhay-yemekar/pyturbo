@@ -636,26 +636,7 @@ export class Application {
     } else {
       b.fill(0, 1, b.cols, b.rows - 2, '░', this.attr('desktop', 0x71));
       for (const window of this.windows) this.drawWindow(window, window === this.active);
-      b.fill(0, 0, b.cols, 1, ' ', this.attr('menu', 0x70));
-      menus.forEach((menu, index) => {
-        const selected =
-          this.menuStack[0]?.top === index ||
-          (this.menuFocused && this.menuStack.length === 0 && this.menuIndex === index);
-        const x = this.menuX(index);
-        const width = plain(menu.label).length + 2;
-        const attr = this.attr(selected ? 'selectedMenu' : 'menu', selected ? 0x20 : 0x70);
-        if (selected) b.fill(x, 0, width, 1, ' ', attr);
-        this.hotText(
-          x + 1,
-          0,
-          menu.label,
-          attr,
-          this.attr(
-            selected ? 'mainMenuSelectedLetter' : 'mainMenuFirstLetter',
-            selected ? 0x24 : 0x74,
-          ),
-        );
-      });
+      this.drawMenuBar();
       b.fill(0, b.rows - 1, b.cols, 1, ' ', this.attr('status', 0x70));
       let status = '~F1~ Help  ~F2~ Save  ~F3~ Open  ~Alt-F9~ Compile  ~F9~ Make  ~F10~ Menu';
       const selected = this.menuStack.at(-1);
@@ -986,6 +967,32 @@ export class Application {
     return index >= 9
       ? Math.max(menus[index].x, this.buffer.cols - (index === 9 ? 15 : 7))
       : menus[index].x;
+  }
+  private menuBarX(index: number): number {
+    // The original left-hand captions start one cell after their popup origin.
+    return this.menuX(index) + (index < 9 ? 1 : 0);
+  }
+  private drawMenuBar(): void {
+    const b = this.buffer;
+    b.fill(0, 0, b.cols, 1, ' ', this.attr('menu', 0x70));
+    menus.forEach((menu, index) => {
+      const selected =
+        this.menuStack[0]?.top === index ||
+        (this.menuFocused && this.menuStack.length === 0 && this.menuIndex === index);
+      const x = this.menuBarX(index);
+      const attr = this.attr(selected ? 'selectedMenu' : 'menu', selected ? 0x20 : 0x70);
+      if (selected) b.fill(x, 0, plain(menu.label).length + 2, 1, ' ', attr);
+      this.hotText(
+        x + 1,
+        0,
+        menu.label,
+        attr,
+        this.attr(
+          selected ? 'mainMenuSelectedLetter' : 'mainMenuFirstLetter',
+          selected ? 0x24 : 0x74,
+        ),
+      );
+    });
   }
   private openMenu(index: number): void {
     this.menuIndex = (index + menus.length) % menus.length;
@@ -3263,7 +3270,7 @@ export class Application {
     if (y === 0) {
       let selected = -1;
       menus.forEach((menu, index) => {
-        if (x >= this.menuX(index) && x < this.menuX(index) + plain(menu.label).length + 2)
+        if (x >= this.menuBarX(index) && x < this.menuBarX(index) + plain(menu.label).length + 2)
           selected = index;
       });
       if (selected >= 0) this.openMenu(selected);
