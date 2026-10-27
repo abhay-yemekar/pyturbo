@@ -331,6 +331,7 @@ test('navigates Colors groups, long item lists and grids by keyboard and pointer
   await expect(dialog.getByLabel('Background', { exact: true })).toHaveValue('6');
   await page.keyboard.press('F1');
   await expect(dialog).toBeAttached();
+  await expect(dialog).toContainText('Tab changes controls');
   const path = testInfo.outputPath('colors-720x400.png');
   await canvas.screenshot({ path });
   await testInfo.attach('PyTurbo Colors control geometry; font fidelity separate', {

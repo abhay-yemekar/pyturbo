@@ -6,6 +6,7 @@ export interface ColorDialogState {
   item: number;
   focus: string;
   values: Record<string, number>;
+  help?: boolean;
 }
 
 export function selectedColorItem(state: ColorDialogState): ColorItem {
@@ -130,6 +131,10 @@ export function drawColorDialog(
   b.text(x + 48, y + 14, 'Item Color', normal);
   b.text(x + 48, y + 15, 'TEXT TEXT', current);
   b.text(x + 48, y + 16, 'TEXT TEXT', current);
+  if (state.help) {
+    b.text(x + 3, y + 17, 'Tab: control  Arrows: choose  Alt+G/I/F/B: focus', normal);
+    b.text(x + 3, y + 18, 'OK saves; Cancel or Esc discards changes.', normal);
+  }
   ['OK', 'Cancel', 'Help'].forEach((text, index) => {
     const rect = layout.buttons[index];
     const role =

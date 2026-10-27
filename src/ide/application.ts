@@ -1226,6 +1226,12 @@ export class Application {
       this.submitDialog(0);
     });
     this.dialogMirror.append(form);
+    if (dialog.colors?.help) {
+      const help = document.createElement('p');
+      help.textContent =
+        'Tab changes controls. Arrow keys choose colors. OK saves; Cancel or Escape discards changes.';
+      form.append(help);
+    }
     const first =
       (previousKey ? form.querySelector<HTMLElement>(`[data-focus-key="${previousKey}"]`) : null) ??
       form.querySelector<HTMLElement>('input, select, button');
@@ -1424,6 +1430,8 @@ export class Application {
     const dialog = this.dialog;
     if (!dialog || choice < 0 || choice >= dialog.buttons.length) return;
     if (dialog.colors && choice === 2) {
+      dialog.colors.help = true;
+      this.syncDialogMirror();
       this.announce(
         'Choose Group and Item, then Foreground and Background. Tab changes controls; arrow keys choose colors. OK saves; Cancel discards.',
       );
