@@ -1,0 +1,10 @@
+name: Visual fidelity
+description: Report a difference from Turbo C++ 3.0
+labels: ["type:fidelity"]
+body:
+  - type: textarea
+    attributes:
+      label: Difference and verification
+      description: Identify the screen, cells, colors, scale, browser, and external reference. Do not upload proprietary assets.
+    validations:
+      required: true

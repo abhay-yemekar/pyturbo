@@ -1,0 +1,10 @@
+pre-commit:
+  commands:
+    check:
+      glob: "*.{ts,js,json,html,css}"
+      run: pnpm exec biome check --write {staged_files}
+      stage_fixed: true
+commit-msg:
+  commands:
+    conventional:
+      run: pnpm exec commitlint --edit {1}
