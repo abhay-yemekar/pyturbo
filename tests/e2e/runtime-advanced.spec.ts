@@ -7,7 +7,7 @@ const editor = (page: Page): Locator =>
 
 async function ready(page: Page): Promise<void> {
   await page.goto('/');
-  await expect(status(page)).toContainText(/Python .* ready/, { timeout: 60_000 });
+  await expect(status(page)).toContainText(/Python .* ready/, { timeout: 120_000 });
 }
 
 async function run(page: Page, source?: string): Promise<void> {

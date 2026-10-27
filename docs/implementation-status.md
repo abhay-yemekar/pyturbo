@@ -34,8 +34,9 @@ commands may use simplified interactions rather than complete Turbo parity.
   Firefox and Playwright WebKit, with actual Python 3.14.2 running in a worker.
   The three failures exposed a textarea selection race and missing waits for
   asynchronous deletion and debugger stepping. After fixes, all **18 regression
-  cases** pass: those three scenarios repeated twice in each engine. The full
-  GitHub suite must pass on the published revision before merging.
+  cases** pass: those three scenarios repeated twice in each engine. GitHub CI
+  then passed **all 123 browser cases** on `58c0510`, plus all five required jobs
+  and CodeQL. Required checks must also pass after subsequent revisions.
 - Cold offline reload with a new Python worker passed in all three engines.
   This verifies the cached app and base interpreter, not every optional package.
 - Real NumPy/Matplotlib, a pinned pure-Python wheel, package failure recovery,
@@ -59,9 +60,23 @@ Dependabot settings are configured.
 
 The Git-connected Cloudflare Pages project `pyturbo` reserves `pyturbo.pages.dev`.
 Both production and preview environments use Node 24 and pnpm 12.15.0, with
-`pnpm build` and output directory `dist`. A successful preview and production
-deployment remain to be verified. The GitHub Projects board is still pending;
-the current CLI authorization lacks its Projects scope. The owner approved the
+`pnpm build` and output directory `dist`. The
+[first preview](https://1f41908c.pyturbo.pages.dev) deployed successfully. HTTP 200,
+COOP `same-origin`, COEP `require-corp`, and the production CSP were verified.
+All five deployed Chromium runtime smoke tests pass, covering real Python,
+UTF-8 input, infinite-loop recovery, debugger evaluation/resume and Stop while
+blocked in input/debugging. The first cold test took about 72 seconds, including
+CDN asset downloads measured near 50 seconds; subsequent scenarios took 6–14
+seconds. Performance targets remain unverified. Runtime tests now allow two
+minutes for initial network loading; the CI browser job has a 30-minute ceiling.
+Production deployment remains to be verified.
+
+The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
+It is configured with Backlog, Ready, In progress, In review and Done, imports
+only PyTurbo issues/PRs, and uses this repository as its default. Issue #1 is in
+progress and PR #2 is in review. Private visibility was verified after reload.
+
+The owner approved the
 repository-level Actions permission needed for release PR creation; it is enabled
 while default workflow token permissions remain read-only.
 
@@ -72,8 +87,7 @@ Successful builds and small geometry fixtures do not certify the whole product.
 
 1. Pass final lint, strict typecheck, unit coverage, production build, and the
    Chromium/Firefox/WebKit suite on the final source.
-2. Verify Pages preview/production COOP/COEP, CSP, CDN/WASM loading, isolation,
-   input, Stop and debugger behavior.
+2. Repeat the verified Pages preview checks on production after its deployment.
 3. Privately compare original desktop, menus, dialogs, windows, scrollbars and
    modes. Commit only PyTurbo screenshots/baselines.
 4. Complete real browser/OS shortcut tests, Safari/iOS and Android checks.
@@ -84,8 +98,9 @@ Successful builds and small geometry fixtures do not certify the whole product.
    waiting for input or debugger commands.
 7. Validate graphics/packages, mobile landscape/touch, screen readers, cached
    offline runtime/packages and measured performance budgets.
-8. Confirm the final logo/icon, complete launch assets, owner review, versioning/release work, and any
-   explicitly authorized announcements or optional analytics.
+8. Confirm the final logo/icon, complete launch assets, owner review,
+   versioning/release work, and any explicitly authorized announcements or
+   optional analytics.
 
 The implementation spans areas from several roadmap phases. No phase is fully
 complete until its exit criteria and verification gates pass. The

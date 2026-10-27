@@ -49,6 +49,8 @@ The owner separately approved the main protection/merge/security settings and
 GitHub Actions release PR creation for this repository. GitHub combines PR
 creation and approval in one repository setting; the release workflow creates
 release PRs, and default workflow token permissions remain read-only.
+The owner chose a private GitHub Projects board, with the five statuses in the plan.
+The owner also approved `issues: write` for the release workflow's labeling needs.
 
 ## Reference questions still open
 

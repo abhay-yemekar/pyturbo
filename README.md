@@ -10,7 +10,10 @@ application server or user account.
 This is an early implementation of the [project plan](docs/project-plan.md), not a
 finished v1 release. Exact visual fidelity, full browser compatibility, and
 production readiness have **not** been certified. The Cloudflare Pages project
-reserves `https://pyturbo.pages.dev`; a successful deployment is still pending.
+reserves `https://pyturbo.pages.dev`; its production deployment is still pending.
+The [current branch preview](https://1f41908c.pyturbo.pages.dev) is deployed and has
+passed runtime smoke checks. Initial Python loading depends on network speed;
+one cold deployed test took about 72 seconds.
 See [implementation status](docs/implementation-status.md) for verification limits.
 
 ![Current PyTurbo desktop at its native 720 by 400 resolution](docs/images/desktop.png)

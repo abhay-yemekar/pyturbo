@@ -3,7 +3,7 @@ import { expect, type Page, test } from '@playwright/test';
 async function ready(page: Page): Promise<void> {
   await page.goto('/');
   await expect(page.getByTestId('runtime-status')).toContainText(/Python .* ready/, {
-    timeout: 60_000,
+    timeout: 120_000,
   });
 }
 

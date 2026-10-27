@@ -39,6 +39,24 @@ Use the verified human Git identity. Do not add extra author/co-author trailers
 or agent names to branch names, commit messages, or PR text. Keep personal and
 office credentials separate and leave global Git/SSH configuration unchanged.
 
+## Releases
+
+Release-please proposes version/changelog PRs. Versions remain `0.x` during
+development; breaking changes increment the minor version until the planned v1
+launch. Changelog author attribution is disabled. Merging a release PR is a
+separate maintainer decision after its checks pass.
+
+The workflow uses the built-in repository token and the approved permissions
+for release PRs and labels. That token does not automatically trigger CI on its
+own PRs; see the [release-please credential documentation](https://github.com/googleapis/release-please-action#other-actions-on-release-please-prs).
+Run the CI workflow on the release PR's exact head branch before merging:
+
+```sh
+gh workflow run ci.yml --repo abhay-yemekar/pyturbo --ref <release-pr-head-branch>
+```
+
+Verify that all five required checks are green on that PR's current commit.
+
 ## Implementation expectations
 
 - Preserve the shared character-cell model for windows, editor, overlaps and

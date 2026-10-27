@@ -36,9 +36,9 @@ fidelity or complete Phase 0.
   plan's IDE-specific Output/Message/Watch/Help defaults and selected-disabled
   menu colour remain subject to reference verification.
 - COOP/COEP headers are configured in Vite development/preview and Pages
-  `_headers`. The Pages file also contains a provisional CSP. Successful
-  deployment, actual response headers, CDN loading, live input and Stop need
-  their own runtime/deployment checks.
+  `_headers`. The Pages preview response headers, CDN loading, live input,
+  Stop and debugger checks pass; evidence is in `implementation-status.md`.
+  Production and broader browser/device checks remain separate gates.
 
 ## Rendering corrections and automated shell checks, 27 October 2026
 
