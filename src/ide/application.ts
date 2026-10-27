@@ -493,6 +493,8 @@ export class Application {
     editor.modified = modified;
     editor.tabSize = this.settings.tabSize;
     editor.autoIndent = this.settings.autoIndent;
+    editor.useTabCharacter = this.settings.useTabCharacter;
+    editor.backspaceUnindents = this.settings.backspaceUnindents;
     editor.cuaKeys = this.settings.cuaKeys;
     const offset = this.windows.length % 6;
     const window: IdeWindow = {
@@ -1670,6 +1672,15 @@ export class Application {
       case 'save':
         if (editor) await this.saveEditor(editor);
         break;
+      case 'editor-options-changed':
+        if (editor) {
+          this.settings.autoIndent = editor.autoIndent;
+          this.settings.useTabCharacter = editor.useTabCharacter;
+          this.settings.backspaceUnindents = editor.backspaceUnindents;
+          this.applyEditorOptions();
+          await this.saveSettings();
+        }
+        break;
       case 'save-all':
         await this.saveAll();
         break;
@@ -2496,8 +2507,8 @@ export class Application {
         this.settings.pauseAfterRun = pause === 'true';
         this.settings.identifierColor = yellow === 'true' ? 'yellow' : 'green';
         this.settings.stderrColor = stderr === 'true';
-        await this.saveSettings();
         this.fit();
+        await this.saveSettings();
       },
     );
   }
@@ -2509,27 +2520,44 @@ export class Application {
         { label: 'Tab size (1–16)', value: String(this.settings.tabSize) },
         { label: 'Auto indent', value: String(this.settings.autoIndent), type: 'checkbox' },
         {
+          label: 'Use tab character',
+          value: String(this.settings.useTabCharacter),
+          type: 'checkbox',
+        },
+        {
+          label: 'Backspace unindents',
+          value: String(this.settings.backspaceUnindents),
+          type: 'checkbox',
+        },
+        {
           label: 'CUA keys (Ctrl+C/X/V/Z)',
           value: String(this.settings.cuaKeys),
           type: 'checkbox',
         },
       ],
-      async ([tab, indent, cua]) => {
+      async ([tab, indent, useTab, unindent, cua]) => {
         const size = Number(tab);
         if (!Number.isInteger(size) || size < 1 || size > 16)
           throw new Error('Tab size must be between 1 and 16.');
         this.settings.tabSize = size;
         this.settings.autoIndent = indent === 'true';
+        this.settings.useTabCharacter = useTab === 'true';
+        this.settings.backspaceUnindents = unindent === 'true';
         this.settings.cuaKeys = cua === 'true';
-        for (const window of this.windows)
-          if (window.editor) {
-            window.editor.tabSize = size;
-            window.editor.autoIndent = indent === 'true';
-            window.editor.cuaKeys = cua === 'true';
-          }
+        this.applyEditorOptions();
         await this.saveSettings();
       },
     );
+  }
+  private applyEditorOptions(): void {
+    for (const window of this.windows)
+      if (window.editor) {
+        window.editor.tabSize = this.settings.tabSize;
+        window.editor.autoIndent = this.settings.autoIndent;
+        window.editor.useTabCharacter = this.settings.useTabCharacter;
+        window.editor.backspaceUnindents = this.settings.backspaceUnindents;
+        window.editor.cuaKeys = this.settings.cuaKeys;
+      }
   }
   private evaluateDialog(inspect: boolean): void {
     if (this.runtimeStatus !== 'paused') {

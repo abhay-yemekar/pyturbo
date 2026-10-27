@@ -30,6 +30,10 @@ The emulator's bitmap dimensions do not replace the agreed PyTurbo target.
 The owner approved continuing implementation while real browser/OS and device
 checks remain explicitly open. Automated Chromium, Firefox and Playwright WebKit
 results do not certify Safari, macOS/iOS, Android or physical shortcut capture.
+For editor whitespace options, the owner confirmed space-only Tab insertion and
+Optimal Fill off by default, with Backspace Unindents and Cursor Through Tabs on.
+The four-space tab width stays unchanged. Recording these defaults does not
+establish implementation of the remaining Optimal Fill or Cursor Through Tabs options.
 
 ## Available dependency pins
 
@@ -63,7 +67,7 @@ The owner also approved `issues: write` for the release workflow's labeling need
 
 The twenty IDE color groups and their defaults have now been transcribed from
 private lossless reference captures. Selected-disabled menu color, full golden screens,
-actual browser/OS keyboard capture, and detailed Ctrl+O T/U/F/R semantics still
+actual browser/OS keyboard capture, and the remaining Ctrl+O F/R implementation still
 need reference evidence. See [fidelity status](fidelity-status.md) and
 [editor details](editor-and-storage.md). No alternate semantics were silently
 assigned to these unverified commands.

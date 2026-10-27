@@ -9,8 +9,15 @@ are zero based. The host displays one-based line and column numbers.
 Arrow keys, Home/End, Page Up/Page Down, Shift+movement, Backspace/Delete, Insert, Enter,
 Tab, and Shift+Tab are implemented. Vertical movement remembers the preferred column
 through shorter lines. Enter copies leading indentation and adds one indentation level
-after a colon. Tab inserts spaces up to the next configured tab stop; Shift+Tab removes
-one indentation level. Insert switches between insertion and overwrite. Overwrite never
+after a colon. Tab inserts spaces up to the next visual tab stop by default, including
+after imported hard tabs or non-BMP characters. Use Tab Character makes Tab and block
+indentation insert literal tabs. Shift+Tab removes one indentation level. Auto-indent
+copies existing whitespace; Python's colon rule still adds one level of spaces.
+Backspace Unindents, enabled by default, moves leading whitespace to the nearest
+preceding nonblank line's smaller indentation, falling back to column zero. It preserves
+the rest of the line and splits a tab only when the target falls inside its cells.
+Outside leading whitespace, or when the option is off, Backspace deletes one source
+character; a selected range is deleted exactly. Insert switches between insertion and overwrite. Overwrite never
 consumes a newline. Surrogate pairs move and delete together.
 
 Undo/redo keeps up to 200 edit snapshots. A saved-content marker determines whether the
@@ -37,7 +44,7 @@ current buffer is modified, including after undoing back to the saved version. S
 | Ctrl+Y / Ctrl+Q Y                   | Delete line / delete to end of line                                               |
 | Ctrl+T / Ctrl+N                     | Delete next word / insert an empty line                                           |
 | Ctrl+L                              | Repeat the last search                                                            |
-| Ctrl+O I                            | Toggle auto-indent in this buffer                                                 |
+| Ctrl+O I / T / U                    | Toggle auto-indent / Use Tab Character / Backspace Unindents                      |
 
 The legacy movement aliases Ctrl+S/D/E/X, Ctrl+F/A, Ctrl+W/Z, Ctrl+R/C, Ctrl+G/H, and
 Ctrl+V work where they do not conflict with enabled CUA shortcuts. Ctrl+A/C/X/V/Z belong
@@ -61,10 +68,16 @@ rows below EOF rather than packing the final viewport and moving the caret upwar
 Private original-IDE captures establish the 14-row/13-line and 7-row/6-line cases;
 only numeric behavior facts are committed in `tests/unit/fixtures/editor-navigation.json`.
 
-The plan lists Ctrl+O T/U/F/R as tab mode, unindent, optimal fill, and cursor-through-tabs
-toggles, but does not specify their detailed Turbo behavior. These four toggles remain
-unimplemented pending reference verification. No alternative tab/fill behavior is silently
-assigned to them. Bookmarks and undo history are session state, not
+The implemented Ctrl+O toggles update the same persistent settings as the Editor dialog,
+including other open files and subsequently created editors. Dialog Cancel does not apply
+draft choices. The original options dialog and 3/7-space Backspace probe establish the
+tab/unindent meanings; no original screenshots are shipped.
+
+Ctrl+O F (Optimal Fill) and Ctrl+O R (Cursor Through Tabs) remain unimplemented.
+Private probes establish that Optimal Fill packs leading whitespace into tabs when
+leaving an edited line, and Cursor Through Tabs permits arrow positions inside an
+expanded tab without editing the file. Those semantics require further buffer work;
+no alternative behavior is silently assigned to them. Bookmarks and undo history are session state, not
 persisted file metadata. Unicode grapheme clusters beyond surrogate pairs are not yet
 treated as indivisible cursor units.
 
@@ -94,7 +107,8 @@ to the Python worker's filesystem. `loadFiles()` validates persisted records rat
 trusting hand-edited or stale database data.
 
 Settings default to Exact 80×25, green identifiers, pause after run off, color video mode,
-four-space tabs, auto-indent, and CUA shortcuts. Settings include arguments, per-role
+four-space tabs, space-only Tab insertion, auto-indent, Backspace Unindents, and CUA
+shortcuts. Settings include arguments, per-role
 colors, and desktop window bounds. Stored settings are validated; unsupported values
 fall back to the agreed defaults. File content, bookmarks, breakpoints, and undo history
 are not embedded inside settings.

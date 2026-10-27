@@ -33,6 +33,8 @@ export class EditorBuffer {
   insertMode = true;
   tabSize = 4;
   autoIndent = true;
+  useTabCharacter = false;
+  backspaceUnindents = true;
   cuaKeys = true;
   pendingCommand: string | null = null;
   blockVisible = true;
@@ -190,7 +192,39 @@ export class EditorBuffer {
   deleteBackward(): void {
     const { from, to } = this.selection;
     if (from !== to) this.replaceRange(from, to, '');
-    else if (from > 0) this.replaceRange(this.previousOffset(from), from, '');
+    else if (from > 0) {
+      const { line, col } = this.position;
+      const lines = this.lines;
+      const before = (lines[line] ?? '').slice(0, col);
+      if (this.backspaceUnindents && before && /^[ \t]+$/.test(before)) {
+        const column = this.visualColumn(before);
+        let target = 0;
+        for (let index = line - 1; index >= 0; index--) {
+          const previous = lines[index] ?? '';
+          if (!previous.trim()) continue;
+          const indentation = this.visualColumn(previous.match(/^[ \t]*/)?.[0] ?? '');
+          if (indentation < column) {
+            target = indentation;
+            break;
+          }
+        }
+        let prefix = '';
+        let width = 0;
+        for (const character of before) {
+          const next = width + (character === '\t' ? this.tabSize - (width % this.tabSize) : 1);
+          if (next > target) {
+            prefix += ' '.repeat(target - width);
+            break;
+          }
+          prefix += character;
+          width = next;
+          if (width === target) break;
+        }
+        let retained = 0;
+        while (retained < prefix.length && before[retained] === prefix[retained]) retained++;
+        this.replaceRange(from - col + retained, from, prefix.slice(retained));
+      } else this.replaceRange(this.previousOffset(from), from, '');
+    }
   }
 
   deleteForward(): void {
@@ -333,7 +367,12 @@ export class EditorBuffer {
     const selection = this.selection;
     const previousCursor = this.cursor;
     if (selection.from === selection.to && !unindent) {
-      this.insert(' '.repeat(this.tabSize - (this.position.col % this.tabSize)));
+      const before = (this.lines[this.position.line] ?? '').slice(0, this.position.col);
+      this.insert(
+        this.useTabCharacter
+          ? '\t'
+          : ' '.repeat(this.tabSize - (this.visualColumn(before) % this.tabSize)),
+      );
       return;
     }
     const from = this.lineStart(selection.from);
@@ -344,7 +383,7 @@ export class EditorBuffer {
     const lineEnd = this.text.indexOf('\n', selectedEnd);
     const to = lineEnd < 0 ? this.text.length : lineEnd;
     const lines = this.text.slice(from, to).split('\n');
-    const indent = ' '.repeat(this.tabSize);
+    const indent = this.useTabCharacter ? '\t' : ' '.repeat(this.tabSize);
     const replacement = lines
       .map((line) =>
         unindent ? line.replace(new RegExp(`^(?: {1,${this.tabSize}}|\\t)`), '') : indent + line,
@@ -361,6 +400,13 @@ export class EditorBuffer {
     let indentation = this.autoIndent ? (before.match(/^\s*/)?.[0] ?? '') : '';
     if (this.autoIndent && before.trimEnd().endsWith(':')) indentation += ' '.repeat(this.tabSize);
     this.insert(`\n${indentation}`);
+  }
+
+  private visualColumn(text: string): number {
+    let column = 0;
+    for (const character of text)
+      column += character === '\t' ? this.tabSize - (column % this.tabSize) : 1;
+    return column;
   }
 
   private deleteLine(toEnd = false): void {
@@ -544,7 +590,14 @@ export class EditorBuffer {
       if (key === 'Escape') return true;
       if (prefix === 'k') this.blockCommand(lower);
       if (prefix === 'q') this.quickCommand(lower, visibleRows);
-      if (prefix === 'o' && lower === 'i') this.autoIndent = !this.autoIndent;
+      if (prefix === 'o') {
+        const option = { i: 'autoIndent', t: 'useTabCharacter', u: 'backspaceUnindents' } as const;
+        const property = option[lower as keyof typeof option];
+        if (property) {
+          this[property] = !this[property];
+          this.pendingCommand = 'editor-options-changed';
+        }
+      }
       return true;
     }
     if (event.altKey && key === 'Backspace') {
