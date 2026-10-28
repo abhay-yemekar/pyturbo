@@ -1,7 +1,9 @@
 # Implementation and verification status
 
-Updated on 27 October 2026. Source coverage and
+Updated on 28 October 2026. Source coverage and
 verified behavior are different. This is not a completed v1 launch checklist.
+
+For usage instructions, see [PyTurbo’s Manual](manual/README.md).
 
 ## Source coverage
 
@@ -25,8 +27,8 @@ commands may use simplified interactions rather than complete Turbo parity.
 ## Verification record
 
 - Whole-project lint and strict TypeScript checks pass.
-- All **50 unit tests** pass locally, including the new reference palettes,
-  legacy color preferences and independent window roles. Coverage is measured
+- All **67 unit tests** pass locally, including reference palettes,
+  editor/storage behavior and system-shortcut handling. Coverage is measured
   separately for the configured scope; it does not cover the entire IDE.
 - The production build and PWA generation pass. Production preview applies the
   same CSP and isolation headers as the Pages `_headers` file. Development alone
@@ -118,6 +120,17 @@ Saving now records the exact persisted source as its baseline. New edits made
 while IndexedDB completes remain modified, with an accurate status message and
 the close/save warning intact. A deterministic browser test delays save completion
 while the user edits and checks both stored content and the newer in-memory buffer.
+
+PR #37 passed all **198 browser cases**, the remaining required checks, CodeQL,
+and Pages, then merged as `c4d15d7`. Six checks on its exact Pages preview passed
+for typing after pointer clicks, fresh output/separate Enter footer, system-key
+dispatch, stable run targets, failed Save As, and delayed save completions. The
+owner also tested and accepted the local fixes. Native Windows screenshot capture
+and real-device/OS gates remain open; synthetic key events and stubbed Keyboard
+Lock do not establish those results. A stopped local preview was separately
+reproduced serving an earlier offline-cached build, then recovered by restarting
+the server and reopening the saved workspace. Production verification of this
+revision remains a separate deployment check.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports

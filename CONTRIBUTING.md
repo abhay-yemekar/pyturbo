@@ -4,6 +4,11 @@ Read the [plan](docs/project-plan.md), [decisions](docs/decisions.md), and
 [implementation status](docs/implementation-status.md). Propose new product or
 stack decisions before implementing them.
 
+Keep [PyTurbo’s Manual](docs/manual/README.md) aligned with user-facing behavior.
+Update the affected chapter and recapture relevant PyTurbo screenshots when a
+workflow changes. Distinguish available features from planned or unverified ones;
+do not add proprietary reference screenshots or copied help text.
+
 ## Setup and checks
 
 Use Node.js 24 and pnpm 12.15.0. Serve through Vite rather than opening HTML

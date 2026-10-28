@@ -708,6 +708,34 @@ test('scrolls Help with keys, wheel and the scrollbar thumb', async ({ page }) =
   await expect(help).toContainText('Independent project.');
 });
 
+test('opens the GitHub manual separately and preserves quick Help and source', async ({
+  page,
+  context,
+}) => {
+  const editor = await open(page);
+  const source = await editor.inputValue();
+  const manualUrl = 'https://github.com/abhay-yemekar/pyturbo/blob/main/docs/manual/README.md';
+  await context.route(manualUrl, (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<h1>PyTurbo manual destination</h1>' }),
+  );
+  await editor.press('F1');
+  const help = page.getByLabel('Help content', { exact: true });
+  await expect(help).toContainText('PyTurbo manual (GitHub)');
+  const [manual] = await Promise.all([
+    page.waitForEvent('popup'),
+    page
+      .getByRole('navigation', { name: 'Main menu' })
+      .getByRole('button', { name: 'PyTurbo manual (GitHub)', exact: true })
+      .press('Enter'),
+  ]);
+  await expect(manual).toHaveURL(manualUrl);
+  await expect(manual.getByRole('heading')).toHaveText('PyTurbo manual destination');
+  await manual.close();
+  await expect(help).toContainText('PyTurbo Help');
+  await page.keyboard.press('Alt+F3');
+  await expect(editor).toHaveValue(source);
+});
+
 test('edits and deletes the selected Watch row using keys and mouse', async ({ page }) => {
   const editor = await open(page);
   for (const expression of ['first_value', 'second_value']) {
