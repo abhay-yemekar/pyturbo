@@ -106,6 +106,12 @@ const HELP = [
   'F7 Trace  F8 Step over  F4 Go to cursor',
   'Ctrl+F8 Toggle breakpoint  Ctrl+F7 Add watch',
   '',
+  'Full manual: Help > PyTurbo manual (GitHub).',
+  'Tutorials, menus, shortcuts and troubleshooting.',
+  '',
+  'Completed output: Enter returns to the editor.',
+  'Each new run clears the previous program output.',
+  '',
   'Python runs locally in a WebAssembly worker.',
   'Files and settings stay in this browser.',
   'Save/download files you want to keep.',
@@ -2283,6 +2289,13 @@ export class Application {
       case 'help':
       case 'help-index':
         this.showWindow('help', HELP);
+        break;
+      case 'manual':
+        window.open(
+          'https://github.com/abhay-yemekar/pyturbo/blob/main/docs/manual/README.md',
+          '_blank',
+          'noopener,noreferrer',
+        );
         break;
       case 'help-on-help':
         this.message('Help on Help', [

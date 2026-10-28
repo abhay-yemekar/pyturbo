@@ -204,6 +204,7 @@ export const menus: Menu[] = [
       item('~T~opic search', 'topic-help', 'Ctrl+F1'),
       item('~P~revious topic', 'help', 'Alt+F1'),
       item('Help on ~h~elp', 'help-on-help'),
+      item('PyTurbo manual (GitHub)', 'manual'),
       separator,
       item('~A~bout…', 'about'),
     ],

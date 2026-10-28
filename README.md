@@ -2,6 +2,9 @@
 
 **Code Python like it's 1992.**
 
+**[Read PyTurbo’s Manual](docs/manual/README.md)** — tutorials, editing and files,
+running and debugging, menus, shortcuts, settings, examples, and troubleshooting.
+
 PyTurbo is a free, open-source Python IDE that aims to recreate the Turbo C++ 3.0
 desktop in your browser: VGA colors, character-cell windows, menus, and F-keys.
 Python runs locally in a Web Worker using Pyodide 314.0.7. The design needs no
