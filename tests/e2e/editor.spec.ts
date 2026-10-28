@@ -35,6 +35,150 @@ async function command(page: Page, name: string): Promise<void> {
     .press('Enter');
 }
 
+test('accepts typing and arrow keys immediately after clicking the editor canvas', async ({
+  page,
+}) => {
+  const editor = await open(page);
+  await page.keyboard.press('Control+a');
+  await page.keyboard.press('Delete');
+  const point = await cell(page, 10, 3);
+  await page.mouse.click(point.x, point.y);
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('print("Hello")');
+  await expect(editor).toHaveValue('print("Hello")');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Backspace');
+  await expect(editor).toHaveValue('print("Hell")');
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('print(2)');
+  await expect(editor).toHaveValue('print("Hell")\nprint(2)');
+});
+
+test('does not reinterpret Windows shortcuts as source editing or dialog commands', async ({
+  page,
+}) => {
+  const editor = await open(page);
+  await editor.fill('abcdef');
+  await editor.press('Home');
+  await editor.press('ArrowRight');
+  for (const key of ['S', 'D', 'N']) {
+    const prevented = await page.evaluate((key) => {
+      const event = new KeyboardEvent('keydown', {
+        key,
+        code: `Key${key}`,
+        metaKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      (document.activeElement ?? document).dispatchEvent(event);
+      return event.defaultPrevented;
+    }, key);
+    expect(prevented).toBe(false);
+    await expect(editor).toHaveValue('abcdef');
+    expect(await editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(1);
+  }
+  await page.keyboard.press('F3');
+  const dialog = page.getByRole('dialog', { name: 'Open a File', exact: true });
+  const name = dialog.getByRole('textbox', { name: 'Name', exact: true });
+  await page.evaluate(() => {
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'S',
+        code: 'KeyS',
+        metaKey: true,
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+  });
+  await expect(dialog).toBeAttached();
+  await expect(name).toBeFocused();
+  for (const modifier of ['altKey', 'ctrlKey']) {
+    const prevented = await page.evaluate((modifier) => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        code: 'Tab',
+        [modifier]: true,
+        bubbles: true,
+        cancelable: true,
+      });
+      document.activeElement?.dispatchEvent(event);
+      return event.defaultPrevented;
+    }, modifier);
+    expect(prevented).toBe(false);
+    await expect(name).toBeFocused();
+  }
+  await page.keyboard.press('Escape');
+  await expect(editor).toHaveValue('abcdef');
+});
+
+test('returns keyboard input to the editor after clicking an empty desktop margin', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const editor = await open(page);
+  await page.keyboard.press('Control+a');
+  await page.keyboard.press('Delete');
+  await page.mouse.click(10, 10);
+  await expect(editor).toBeFocused();
+  await page.keyboard.type('print("Hello")');
+  await expect(editor).toHaveValue('print("Hello")');
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('Backspace');
+  await expect(editor).toHaveValue('print("Hello)');
+});
+
+test('keeps pointer drag selection editable after releasing the canvas', async ({ page }) => {
+  const editor = await open(page);
+  await editor.fill('abcdef');
+  const start = await cell(page, 1, 2);
+  const end = await cell(page, 4, 2);
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(end.x, end.y, { steps: 4 });
+  await page.mouse.up();
+  await expect(editor).toBeFocused();
+  expect(
+    await editor.evaluate((input: HTMLTextAreaElement) =>
+      input.value.slice(input.selectionStart, input.selectionEnd),
+    ),
+  ).toBe('abc');
+  await page.keyboard.type('X');
+  await expect(editor).toHaveValue('Xdef');
+});
+
+test('keeps dialog fields typing after canvas clicks and preserves modal focus on desktop clicks', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const editor = await open(page);
+  const source = await editor.inputValue();
+  await page.keyboard.press('F3');
+  const dialog = page.getByRole('dialog', { name: 'Open a File', exact: true });
+  const name = dialog.getByRole('textbox', { name: 'Name', exact: true });
+  const point = await cell(page, 20, 10);
+  await page.mouse.click(point.x, point.y);
+  await expect(name).toBeFocused();
+  await page.keyboard.press('Control+a');
+  await page.keyboard.type('sample.py');
+  await expect(name).toHaveValue('sample.py');
+  await page.mouse.click(10, 10);
+  await expect(name).toBeFocused();
+  await page.keyboard.press('End');
+  await page.keyboard.type('x');
+  await expect(name).toHaveValue('sample.pyx');
+  await expect(editor).toHaveValue(source);
+  await page.keyboard.press('Escape');
+  await expect(editor).toBeFocused();
+  await page.keyboard.press('Control+PageDown');
+  await page.keyboard.type('# typing restored');
+  await expect(editor).toHaveValue(`${source}# typing restored`);
+});
+
 test('edits, undoes, redoes and overwrites while Python is still loading', async ({ page }) => {
   const editor = await open(page);
   await editor.fill('value = 1');

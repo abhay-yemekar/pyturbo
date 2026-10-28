@@ -29,6 +29,7 @@ import {
   selectedColorItem,
 } from './color-dialog';
 import { COLOR_GROUPS, COLOR_NAMES, colorAttribute, windowColorGroup } from './colors';
+import { acknowledgesOutput, isSystemKey } from './keyboard';
 import { hotkey, type MenuItem, menus, plain } from './menus';
 
 type WindowKind = 'editor' | 'messages' | 'watch' | 'output' | 'help' | 'project' | 'notes';
@@ -187,7 +188,15 @@ export class Application {
   private graphicColor = 15;
   private plot?: HTMLImageElement;
   private compileRequested = false;
-  private pendingRun?: DebugOptions | 'normal';
+  private pendingRun?: {
+    filename: string;
+    files: Record<string, string>;
+    args: string[];
+    debug?: DebugOptions;
+  };
+  private saveSequence = 0;
+  private readonly fileSaveVersions = new Map<string, number>();
+  private readonly editorRenameVersions = new WeakMap<EditorBuffer, number>();
   private singleKeyInput = false;
   private composing = false;
   private consoleAttr = 0x07;
@@ -285,6 +294,12 @@ export class Application {
       this.uploadInput,
     );
     this.input.addEventListener('input', () => this.textInput());
+    this.root.addEventListener('pointerdown', (event) => {
+      if (event.button === 0 && (event.target === this.root || event.target === this.stage)) {
+        event.preventDefault();
+        this.focus();
+      }
+    });
     this.input.addEventListener('compositionstart', () => {
       this.composing = true;
     });
@@ -484,6 +499,7 @@ export class Application {
   }
 
   private openEditor(filename: string, source: string, modified = false, bounds?: Rect): IdeWindow {
+    this.showDesktop();
     const existing = this.windows.find((window) => window.editor?.filename === filename);
     if (existing) {
       this.activate(existing);
@@ -529,6 +545,7 @@ export class Application {
     const editor = this.editor;
     const value = this.userScreen ? this.consoleInput : (editor?.text ?? '');
     if (this.input.value !== value) this.input.value = value;
+    this.input.readOnly = this.userScreen && !this.inputWaiting && !this.shell;
     this.input.setAttribute('aria-label', this.userScreen ? 'Program input' : 'Python editor');
     if (editor && !this.userScreen) {
       const selection = editor.selection;
@@ -619,7 +636,9 @@ export class Application {
       b.text(0, 2, 'PyTurbo closed. Press any key to restart.', 0x07);
     } else if (this.userScreen) {
       b.fill(0, 0, b.cols, b.rows, ' ', 0x07);
-      const display = this.output.slice(-b.rows);
+      const pauseHint = this.pausedAfterRun && !this.inputWaiting && !this.shell;
+      const outputRows = b.rows - (pauseHint ? 1 : 0);
+      const display = this.output.slice(-outputRows);
       let inputX = 0;
       if (this.inputWaiting || this.shell) {
         const last = display.pop() ?? { text: '', attr: 0x07 };
@@ -629,12 +648,17 @@ export class Application {
         inputX = characters.length % b.cols;
         if (!inputX) display.push({ text: '', attr: 0x07 });
       }
-      const visible = display.slice(-b.rows);
+      const visible = display.slice(-outputRows);
       visible.forEach((line, y) => {
         b.text(0, y, Array.from(line.text).slice(0, b.cols).join(''), line.attr);
       });
       if (this.cursorOn && (this.inputWaiting || this.shell))
         cursor = { x: inputX, y: Math.max(0, visible.length - 1), block: false };
+      if (pauseHint) {
+        const attr = this.attr('status', 0x70);
+        b.fill(0, b.rows - 1, b.cols, 1, ' ', attr);
+        b.text(1, b.rows - 1, 'Press Enter to return to the editor', attr);
+      }
     } else {
       b.fill(0, 1, b.cols, b.rows - 2, '░', this.attr('desktop', 0x71));
       for (const window of this.windows) this.drawWindow(window, window === this.active);
@@ -997,6 +1021,7 @@ export class Application {
     });
   }
   private openMenu(index: number): void {
+    this.showDesktop();
     this.menuIndex = (index + menus.length) % menus.length;
     const menu = menus[this.menuIndex];
     const width = Math.max(
@@ -1097,6 +1122,7 @@ export class Application {
       colors?: Record<string, number>;
     } = {},
   ): void {
+    this.showDesktop();
     this.menuStack = [];
     this.menuFocused = false;
     this.dialog = {
@@ -1692,12 +1718,19 @@ export class Application {
             [{ label: 'Name', value: editor.filename }],
             async ([name]) => {
               validateFilename(name);
+              if (
+                this.windows.some(
+                  (window) => window.editor !== editor && window.editor?.filename === name,
+                )
+              )
+                throw new Error(
+                  `${name} is already open in another editor. Choose another name or close that editor first.`,
+                );
               const exists = this.files.some(
                 (file) => file.name === name && name !== editor.filename,
               );
               const save = async () => {
-                editor.filename = name;
-                await this.saveEditor(editor);
+                await this.saveEditor(editor, name);
               };
               if (exists)
                 this.openDialog(
@@ -1909,9 +1942,13 @@ export class Application {
           });
         break;
       case 'stop':
+        this.pendingRun = undefined;
+        this.compileRequested = false;
         this.runtime.stop();
         break;
       case 'reset':
+        this.pendingRun = undefined;
+        this.compileRequested = false;
         this.runtime.reset();
         this.cpu = undefined;
         this.userScreen = false;
@@ -1919,7 +1956,7 @@ export class Application {
         break;
       case 'compile':
       case 'make':
-        if (editor) {
+        if (editor && !this.runtime.running && !this.pendingRun) {
           this.compileRequested = true;
           this.runtime.compile(this.fileMap(), editor.filename, command === 'make');
           this.announce('Compiling…');
@@ -2311,15 +2348,31 @@ export class Application {
   private fileMap(): Record<string, string> {
     return Object.fromEntries(this.projectFiles().map((file) => [file.name, file.content]));
   }
-  private async saveEditor(editor: EditorBuffer): Promise<void> {
+  private async saveEditor(editor: EditorBuffer, filename?: string): Promise<void> {
+    const version = ++this.saveSequence;
     const file: WorkspaceFile = {
-      name: validateFilename(editor.filename),
+      name: validateFilename(filename ?? editor.filename),
       content: editor.text,
       updatedAt: Date.now(),
     };
     await this.store.saveFile(file);
-    this.files = [...this.files.filter((entry) => entry.name !== file.name), file];
-    editor.markSaved(file.content);
+    if (version > (this.fileSaveVersions.get(file.name) ?? 0)) {
+      this.fileSaveVersions.set(file.name, version);
+      this.files = [...this.files.filter((entry) => entry.name !== file.name), file];
+    }
+    if (filename !== undefined && version > (this.editorRenameVersions.get(editor) ?? 0)) {
+      this.editorRenameVersions.set(editor, version);
+      editor.filename = file.name;
+      editor.markSaved(
+        this.files.find((entry) => entry.name === file.name)?.content ?? file.content,
+      );
+    } else if (
+      filename === undefined &&
+      editor.filename === file.name &&
+      this.fileSaveVersions.get(file.name) === version
+    ) {
+      editor.markSaved(file.content);
+    }
     this.persistDesktop();
     this.announce(
       editor.modified ? `${file.name} saved; newer edits are unsaved.` : `${file.name} saved.`,
@@ -2436,7 +2489,14 @@ export class Application {
       );
     else close();
   }
+  private showDesktop(): void {
+    if (!this.userScreen) return;
+    this.userScreen = false;
+    this.pausedAfterRun = false;
+    this.syncInput();
+  }
   private showWindow(kind: WindowKind, content?: string[]): void {
+    this.showDesktop();
     const existing = this.windows.find((window) => window.kind === kind);
     if (existing) {
       if (content) existing.content = content;
@@ -2591,8 +2651,18 @@ export class Application {
   }
 
   private async run(debug?: DebugOptions): Promise<void> {
-    const editor = this.editor;
-    if (!editor || this.runtime.running) return;
+    const source = this.active?.editor
+      ? this.active
+      : this.windows.findLast((window) => window.editor);
+    const editor = source?.editor;
+    if (!source || !editor || this.runtime.running || this.pendingRun) return;
+    if (source !== this.active) this.activate(source);
+    const request = {
+      filename: editor.filename,
+      files: this.fileMap(),
+      args: [...this.settings.arguments],
+      debug,
+    };
     if (!this.runtime.isolated) {
       this.openDialog(
         'Program input',
@@ -2603,24 +2673,30 @@ export class Application {
         [{ label: 'Program input', value: '' }],
         async ([input]) => {
           await this.saveAll();
-          this.beginRun(debug, input.replaceAll('|', '\n'));
+          this.beginRun(request, input.replaceAll('|', '\n'));
         },
       );
       return;
     }
-    await this.saveAll();
-    this.pendingRun = debug ?? 'normal';
-    this.runtime.compile(this.fileMap(), editor.filename);
+    this.pendingRun = request;
+    this.compileRequested = false;
+    try {
+      await this.saveAll();
+      if (this.pendingRun === request) this.runtime.compile(request.files, request.filename);
+    } catch (error) {
+      if (this.pendingRun === request) this.pendingRun = undefined;
+      throw error;
+    }
   }
-  private beginRun(debug?: DebugOptions, stdin?: string): void {
-    const editor = this.editor;
-    if (!editor) return;
-    const points = [...(this.breakpoints.get(editor.filename) ?? [])];
+  private beginRun(request: NonNullable<Application['pendingRun']>, stdin?: string): void {
+    const { filename, files, args, debug } = request;
+    const points = [...(this.breakpoints.get(filename) ?? [])];
     const options = debug
       ? { ...debug, breakpoints: points, watches: this.watches }
       : points.length
         ? { mode: 'continue' as const, breakpoints: points, watches: this.watches }
         : undefined;
+    this.clearOutput();
     this.userScreen = true;
     this.shell = false;
     this.inputWaiting = false;
@@ -2632,7 +2708,7 @@ export class Application {
     this.plot = undefined;
     this.graphic?.remove();
     this.graphic = undefined;
-    this.runtime.run(this.fileMap(), editor.filename, this.settings.arguments, options, stdin);
+    this.runtime.run(files, filename, args, options, stdin);
     this.syncInput();
     this.focus();
     this.dirty = true;
@@ -2672,7 +2748,8 @@ export class Application {
         this.consoleInput = '';
         if (!this.shell) {
           this.pausedAfterRun = this.settings.pauseAfterRun;
-          if (this.pausedAfterRun) this.appendOutput('\nPress any key…');
+          if (this.pausedAfterRun)
+            this.announce('Program ended. Press Enter to return to the editor.');
           this.userScreen = this.pausedAfterRun;
         }
         this.syncInput();
@@ -2688,9 +2765,10 @@ export class Application {
         this.errors = event.entries;
         this.errorIndex = 0;
         if (this.pendingRun && event.ok) {
-          const debug = this.pendingRun;
+          const request = this.pendingRun;
           this.pendingRun = undefined;
-          this.beginRun(debug === 'normal' ? undefined : debug);
+          this.compileRequested = false;
+          this.beginRun(request);
         } else if (this.compileRequested || !event.ok) {
           this.pendingRun = undefined;
           this.compileRequested = false;
@@ -2753,6 +2831,14 @@ export class Application {
     }
     this.dirty = true;
   }
+  private clearOutput(): void {
+    this.output = [{ text: '', attr: this.consoleAttr }];
+    this.outputMirror.textContent = '';
+    for (const window of this.windows) {
+      if (window.kind === 'output') window.scrollY = 0;
+    }
+    this.dirty = true;
+  }
   private appendOutput(text: string, attr = this.consoleAttr): void {
     for (const ch of text) {
       let current = this.output.at(-1);
@@ -2782,7 +2868,7 @@ export class Application {
   private graphics(command: string, args: unknown[]): void {
     const values = args.map(Number);
     if (command.startsWith('console.')) {
-      if (command === 'console.clear') this.output = [{ text: '', attr: this.consoleAttr }];
+      if (command === 'console.clear') this.clearOutput();
       if (command === 'console.color')
         this.consoleAttr = (this.consoleAttr & 0xf0) | (values[0] & 15);
       if (command === 'console.background')
@@ -2865,7 +2951,7 @@ export class Application {
   }
 
   private keydown(event: KeyboardEvent): void {
-    if (event.isComposing || this.composing) return;
+    if (event.isComposing || this.composing || isSystemKey(event, navigator.platform)) return;
     const key = event.key;
     const lower = key.toLowerCase();
     const control = event.ctrlKey || event.metaKey;
@@ -3037,6 +3123,7 @@ export class Application {
         return;
       }
       if (!this.inputWaiting && !this.shell && !this.runtime.running) {
+        if (!acknowledgesOutput(event)) return;
         event.preventDefault();
         this.userScreen = false;
         this.pausedAfterRun = false;
@@ -3217,6 +3304,7 @@ export class Application {
   }
   private pointerDown(event: PointerEvent): void {
     if (event.button !== 0) return;
+    event.preventDefault();
     const { x, y } = this.point(event);
     this.canvas.setPointerCapture(event.pointerId);
     if (this.quit) {
@@ -3227,11 +3315,6 @@ export class Application {
     }
     if (this.userScreen) {
       this.focus();
-      if (!this.inputWaiting && !this.shell && !this.runtime.running) {
-        this.userScreen = false;
-        this.syncInput();
-        this.dirty = true;
-      }
       return;
     }
     if (this.dialog) {

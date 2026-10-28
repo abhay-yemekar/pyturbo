@@ -16,6 +16,8 @@ completed implementation or verification.
 | Identifiers           | Factory light green; Classic Yellow preset                                    |
 | Phones                | Landscape, exact look and touch controls                                      |
 | Pause after run       | Off by default; optional setting                                              |
+| Completed output      | Enter returns to the editor; pause instructions stay outside program output   |
+| Repeated runs         | Clear the previous output when a new program run starts                       |
 | Execution             | Browser-only; server mode outside scope                                       |
 | Commit identity       | Verified human author/committer; no added author/co-author trailers           |
 | Branch/commit/PR text | No agent names                                                                |
@@ -34,6 +36,11 @@ For editor whitespace options, the owner confirmed space-only Tab insertion and
 Optimal Fill off by default, with Backspace Unindents and Cursor Through Tabs on.
 The four-space tab width stays unchanged. Recording these defaults does not
 establish implementation of the remaining Optimal Fill or Cursor Through Tabs options.
+On 28 October the owner requested Enter-only return from completed output and
+confirmed clearing the previous output before each run. These are deliberate
+usability differences from the plan's retained console history and any-key return.
+The factory pause-after-run default remains off. Debugger resume and input within
+the same run retain that run's output.
 
 ## Available dependency pins
 

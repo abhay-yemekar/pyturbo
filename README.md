@@ -86,6 +86,11 @@ needed; fullscreen Keyboard Lock depends on browser support and permissions.
 The agreed defaults are Exact 80×25, light-green identifiers, landscape phones with
 touch controls, pause after run off, and browser-only execution. A finished run
 returns to the IDE; Alt+F5 displays its output.
+To keep completed output visible, enable **Options → Environment → Preferences →
+Pause after run**. Press **Enter** to return to the editor. Each new run clears
+the previous output; the pause instruction stays separate from program text.
+Enter-only return and automatic clearing are owner-approved differences from
+Turbo C++ behavior.
 
 Files/settings belong to the current origin and browser profile. Download
 important files separately because browser storage can be cleared. Share links
