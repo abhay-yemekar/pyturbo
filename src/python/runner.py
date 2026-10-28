@@ -132,6 +132,13 @@ def run(filename, args_json, debug_json):
     finally:
         if debugger:
             debugger.close()
+        # CPython may still buffer output from print(..., end=""). Flush it
+        # before the worker reports completion and displays the pause hint.
+        for stream in (old_stdout, old_stderr):
+            try:
+                stream.flush()
+            except (OSError, ValueError):
+                pass
         sys.argv = old_argv
         sys.path[:] = old_path
         sys.stdout, sys.stderr, sys.stdin = old_stdout, old_stderr, old_stdin

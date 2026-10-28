@@ -22,6 +22,147 @@ test('runs real Python and returns to the editor after completion', async ({ pag
   );
 });
 
+async function enablePauseAfterRun(page: Page): Promise<void> {
+  await page.keyboard.press('Alt+o');
+  await page.keyboard.press('e');
+  await page.keyboard.press('p');
+  const preferences = page.getByRole('dialog', { name: 'Preferences', exact: true });
+  const pause = preferences.getByLabel('Pause after run', { exact: true });
+  if (!(await pause.isChecked())) await pause.press('Space');
+  await preferences.getByRole('button', { name: 'OK', exact: true }).press('Enter');
+}
+
+async function bottomRowColor(page: Page): Promise<number[]> {
+  return page
+    .locator('canvas')
+    .first()
+    .evaluate((element: HTMLCanvasElement) => {
+      const context = element.getContext('2d');
+      if (!context) throw new Error('Console canvas is unavailable');
+      return Array.from(context.getImageData(0, element.height - 1, 1, 1).data);
+    });
+}
+
+test('clears previous output and keeps pause instructions separate across consecutive runs', async ({
+  page,
+}, testInfo) => {
+  await ready(page);
+  await enablePauseAfterRun(page);
+  const source = 'for i in range(1,10):\n    print(i, "")\n';
+  const output = page.getByRole('log', { name: 'Program output' });
+  const expected = Array.from({ length: 9 }, (_, index) => `${index + 1} \n`).join('');
+  await run(page, source);
+  await expect.poll(() => output.textContent()).toBe(expected);
+  await expect(page.getByTestId('runtime-status')).toContainText('Program finished');
+  await expect(page.getByRole('status')).toContainText('Press Enter to return to the editor');
+  await expect.poll(() => bottomRowColor(page)).toEqual([170, 170, 170, 255]);
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('textbox', { name: 'Python editor', exact: true })).toHaveValue(
+    source,
+  );
+  await run(page, `${source}print("second run")`);
+  const latest = `${expected}second run\n`;
+  await expect.poll(() => output.textContent()).toBe(latest);
+  await expect(page.getByTestId('runtime-status')).toContainText('Program finished');
+  await expect.poll(() => bottomRowColor(page)).toEqual([170, 170, 170, 255]);
+  await page
+    .locator('canvas')
+    .first()
+    .screenshot({ path: testInfo.outputPath('pause-footer.png') });
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Alt+F5');
+  await expect.poll(() => bottomRowColor(page)).toEqual([0, 0, 0, 255]);
+  expect(await output.textContent()).toBe(latest);
+});
+
+test('preserves exact output without a trailing newline when pausing', async ({ page }) => {
+  await ready(page);
+  await enablePauseAfterRun(page);
+  const source = 'print("Hello", end="")';
+  const output = page.getByRole('log', { name: 'Program output' });
+  await run(page, source);
+  await expect.poll(() => output.textContent()).toBe('Hello');
+  await expect(page.getByTestId('runtime-status')).toContainText('Program finished');
+  await expect.poll(() => bottomRowColor(page)).toEqual([170, 170, 170, 255]);
+  await page.keyboard.press('x');
+  await expect(page.getByRole('textbox', { name: 'Program input', exact: true })).toHaveAttribute(
+    'readonly',
+    '',
+  );
+  await expect.poll(() => output.textContent()).toBe('Hello');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('textbox', { name: 'Program input', exact: true })).toBeAttached();
+  const consoleBounds = await page.locator('canvas').first().boundingBox();
+  if (!consoleBounds) throw new Error('Console is not visible');
+  await page.mouse.click(consoleBounds.x + 30, consoleBounds.y + 30);
+  await expect(page.getByRole('textbox', { name: 'Program input', exact: true })).toBeAttached();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('textbox', { name: 'Python editor', exact: true })).toHaveValue(
+    source,
+  );
+  await run(page, 'print("World", end="")');
+  await expect.poll(() => output.textContent()).toBe('World');
+  await expect(page.getByTestId('runtime-status')).toContainText('Program finished');
+});
+
+test('keeps completed output visible through screenshot shortcuts, modifiers and focus changes', async ({
+  page,
+}) => {
+  await ready(page);
+  await enablePauseAfterRun(page);
+  const source = 'print("Screenshot this output")';
+  const output = page.getByRole('log', { name: 'Program output' });
+  await run(page, source);
+  await expect(page.getByTestId('runtime-status')).toContainText('Program finished');
+  const systemKeys: Array<
+    Pick<KeyboardEventInit, 'key' | 'code' | 'metaKey' | 'shiftKey' | 'ctrlKey' | 'altKey'>
+  > = [
+    { key: 'Meta', code: 'MetaLeft', metaKey: true },
+    { key: 'Shift', code: 'ShiftLeft', metaKey: true, shiftKey: true },
+    { key: 'S', code: 'KeyS', metaKey: true, shiftKey: true },
+    { key: 'Shift', code: 'ShiftLeft', shiftKey: true },
+    { key: 'Meta', code: 'MetaLeft', metaKey: true, shiftKey: true },
+    { key: 'S', code: 'KeyS', metaKey: true, shiftKey: true },
+    { key: 'Control', ctrlKey: true },
+    { key: 'Alt', altKey: true },
+    { key: 'AltGraph', ctrlKey: true, altKey: true },
+    { key: 'CapsLock' },
+    { key: 'PrintScreen', code: 'PrintScreen' },
+    { key: 'F11', code: 'F11' },
+    { key: 'F12', code: 'F12' },
+    { key: 'Tab', code: 'Tab', altKey: true },
+    { key: 'c', code: 'KeyC', ctrlKey: true },
+  ];
+  for (const paused of [true, false]) {
+    for (const init of systemKeys) {
+      // Exercise app dispatch without invoking an OS screenshot or switching apps.
+      const prevented = await page.evaluate((init) => {
+        const event = new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true });
+        (document.activeElement ?? document).dispatchEvent(event);
+        return event.defaultPrevented;
+      }, init);
+      expect(prevented, `${init.key} should remain available to the browser/OS`).toBe(false);
+      await expect(
+        page.getByRole('textbox', { name: 'Program input', exact: true }),
+      ).toBeAttached();
+      expect(await output.textContent()).toBe('Screenshot this output\n');
+    }
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event('blur'));
+      window.dispatchEvent(new Event('focus'));
+    });
+    await expect(page.getByRole('textbox', { name: 'Program input', exact: true })).toBeAttached();
+    await expect
+      .poll(() => bottomRowColor(page))
+      .toEqual(paused ? [170, 170, 170, 255] : [0, 0, 0, 255]);
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('textbox', { name: 'Python editor', exact: true })).toHaveValue(
+      source,
+    );
+    if (paused) await page.keyboard.press('Alt+F5');
+  }
+});
+
 test('supports repeated live input with UTF-8 through shared buffers', async ({ page }) => {
   await ready(page);
   await run(page, 'for i in range(2):\n    name = input("Name: ")\n    print("Hello", name)\n');
@@ -57,11 +198,10 @@ test('uses fresh main globals on consecutive runs', async ({ page }) => {
   const source = 'print(globals().get("previous_run", "fresh namespace"))\nprevious_run = 42\n';
   await run(page, source);
   await expect(page.getByTestId('runtime-status')).toContainText('Program finished');
-  await run(page, source);
-  await expect(async () => {
-    const output = await page.getByRole('log', { name: 'Program output' }).textContent();
-    expect(output?.match(/fresh namespace/g)).toHaveLength(2);
-  }).toPass();
+  await run(page, `print("second run")\n${source}`);
+  await expect(page.getByRole('log', { name: 'Program output' })).toHaveText(
+    'second run\nfresh namespace\n',
+  );
 });
 
 test('shows a traceback from the actual project filename and line', async ({ page }) => {
