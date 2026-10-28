@@ -22,7 +22,10 @@ consumes a newline. Surrogate pairs move and delete together.
 
 Undo/redo keeps up to 200 edit snapshots. A saved-content marker determines whether the
 current buffer is modified, including after undoing back to the saved version. Saving uses
-`markSaved()` and preserves undo history. Loading via `setText()` clears that history.
+`markSaved(persistedContent)` and preserves undo history. The baseline is the exact
+content written to storage; edits made while that save was pending stay modified and
+retain the close warning. Status text distinguishes that case from a fully saved buffer.
+Loading via `setText()` clears that history.
 
 | Keys                                | Implemented behavior                                                              |
 | ----------------------------------- | --------------------------------------------------------------------------------- |

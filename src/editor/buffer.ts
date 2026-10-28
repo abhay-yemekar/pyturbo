@@ -95,9 +95,9 @@ export class EditorBuffer {
     this.modified = modified;
   }
 
-  markSaved(): void {
-    this.savedText = this.text;
-    this.modified = false;
+  markSaved(content = this.text): void {
+    this.savedText = content;
+    this.modified = this.text !== this.savedText;
   }
 
   private snapshot(): Snapshot {

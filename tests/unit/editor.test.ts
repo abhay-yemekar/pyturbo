@@ -54,6 +54,21 @@ describe('EditorBuffer', () => {
     expect(buffer.position.col).toBe(4);
   });
 
+  it('keeps later edits modified when an older save completes', () => {
+    const buffer = new EditorBuffer();
+    buffer.insert('saved version');
+    const persisted = buffer.text;
+    buffer.insert(' with later edits');
+    buffer.markSaved(persisted);
+    expect(buffer.modified).toBe(true);
+    expect(buffer.text).toBe('saved version with later edits');
+    buffer.undo();
+    expect(buffer.text).toBe(persisted);
+    expect(buffer.modified).toBe(false);
+    buffer.redo();
+    expect(buffer.modified).toBe(true);
+  });
+
   it.each(navigationReference.cases)(
     'matches reference paging in a $visibleRows-row editor body',
     ({ visibleRows, pageLine, bottomLine }) => {

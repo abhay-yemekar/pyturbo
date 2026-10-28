@@ -2319,9 +2319,11 @@ export class Application {
     };
     await this.store.saveFile(file);
     this.files = [...this.files.filter((entry) => entry.name !== file.name), file];
-    editor.markSaved();
+    editor.markSaved(file.content);
     this.persistDesktop();
-    this.announce(`${file.name} saved.`);
+    this.announce(
+      editor.modified ? `${file.name} saved; newer edits are unsaved.` : `${file.name} saved.`,
+    );
   }
   private async saveAll(): Promise<void> {
     for (const window of this.windows) if (window.editor) await this.saveEditor(window.editor);
