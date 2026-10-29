@@ -1,6 +1,20 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
 
+test('preserves isolation headers on conditional cached asset responses', async ({ request }) => {
+  const asset = await request.get('/icons/icon.svg');
+  expect(asset.status()).toBe(200);
+  const etag = asset.headers().etag;
+  expect(etag).toBeTruthy();
+  const cached = await request.get('/icons/icon.svg', { headers: { 'If-None-Match': etag } });
+  expect(cached.status()).toBe(304);
+  expect(cached.headers()['cross-origin-opener-policy']).toBe('same-origin');
+  expect(cached.headers()['cross-origin-embedder-policy']).toBe('require-corp');
+  expect(cached.headers()['content-security-policy']).toBe(
+    asset.headers()['content-security-policy'],
+  );
+});
+
 async function shellReady(page: Page): Promise<void> {
   // These tests deliberately exercise the shell before Python finishes loading.
   // Real runtime execution is covered separately by runtime.spec.ts.
@@ -327,6 +341,32 @@ test('discards cancelled Colors previews and persists accepted choices after rel
   await expect(dialog.getByLabel('Foreground', { exact: true })).toHaveValue('10');
   await dialog.getByLabel('Foreground', { exact: true }).selectOption({ label: 'Light red' });
   await dialog.getByRole('button', { name: 'OK', exact: true }).press('Enter');
+  // Closing the dialog starts an asynchronous save. Observe its commit before
+  // forcing navigation rather than racing the pending IndexedDB transaction.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number | undefined>((resolve, reject) => {
+            const opening = indexedDB.open('pyturbo');
+            opening.onerror = () => reject(opening.error);
+            opening.onsuccess = () => {
+              const database = opening.result;
+              const transaction = database.transaction('workspace', 'readonly');
+              const read = transaction.objectStore('workspace').get('settings');
+              transaction.oncomplete = () => {
+                database.close();
+                resolve(read.result?.colors?.editIdentifier);
+              };
+              transaction.onabort = () => {
+                database.close();
+                reject(transaction.error);
+              };
+            };
+          }),
+      ),
+    )
+    .toBe(0x1c);
   await page.reload();
   await expect(page.getByTestId('editor')).toHaveValue(/Code Python like/);
   dialog = await openColors();

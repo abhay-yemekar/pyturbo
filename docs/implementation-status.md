@@ -1,9 +1,31 @@
 # Implementation and verification status
 
-Updated on 28 October 2026. Source coverage and
+Updated on 29 October 2026. Source coverage and
 verified behavior are different. This is not a completed v1 launch checklist.
 
 For usage instructions, see [PyTurbo’s Manual](manual/README.md).
+
+## Position against the roadmap
+
+The agreed stack and scope remain in place. Implementation has crossed phase
+boundaries to address the owner's reported bugs, requested manual and approved
+update action. No phase is certified complete while its exit checks remain open.
+
+| Plan phase                     | Delivered or implemented                                                                                                         | Still open                                                                                        |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 0 — Foundations                | Personal GitHub repository, CI/security settings, private task board, Pages production/previews, VGA renderer and browser Python | Original-IDE visual baselines and real browser/OS shortcut matrix                                 |
+| 1 — Turbo shell and Run        | Menus, windows, editor, compile/run/input/Stop, messages, browser file storage and sharing; accepted typing/output/save fixes    | Complete visual and real-device verification                                                      |
+| 2 — Feature parity             | Window management, search, packages/plots, Colors/preferences, Help, arguments and persistent editor options                     | Optimal Fill and Cursor Through Tabs (#33), plus remaining parity verification                    |
+| 3 — Debugger and nostalgia     | Trace/step/breakpoints, watches/evaluate/stack, multi-file projects and conio/graphics/turtle bridges                            | Complete debugger/graphics interaction and compatibility checks                                   |
+| 4 — Polish, mobile and offline | Base offline runtime, DOS/touch controls, illustrated public manual; owner-tested safe update action (#40)                       | Full CI/deployment verification, mobile/real-device checks, accessibility and performance budgets |
+| 5 — Launch                     | Release automation and an unpublished draft 0.1.0 proposal                                                                       | Final release gates, branding/launch assets and explicit publication decision; no v1 release      |
+
+The owner tested and accepted **Save and reload** on 29 October using a separate
+two-version demo with the app's built Workbox service worker. The delivery
+checkpoint requires passing PR checks and deployment verification; the next
+feature work is **Optimal Fill and Cursor Through Tabs (#33)**. The original
+plan is preserved as a dated reference; [decisions.md](decisions.md) records
+approved changes such as Enter-only output return and clearing each new run.
 
 ## Source coverage
 
@@ -131,6 +153,36 @@ Lock do not establish those results. A stopped local preview was separately
 reproduced serving an earlier offline-cached build, then recovered by restarting
 the server and reopening the saved workspace. Production verification of this
 revision remains a separate deployment check.
+
+PR #39 added the public illustrated manual, its Help-menu link, five original
+PyTurbo screenshots and a browser regression for opening it without losing the
+source editor. All **201 browser cases**, the other required jobs, CodeQL and
+Pages passed before it merged as `d9c7c59`. Three Chromium checks passed on its
+exact Pages preview and again on production for the manual link and completed
+output behavior. Production served that merged bundle with HTTP 200 and the
+required isolation headers. This establishes those checks, not full product or
+real-device certification.
+
+Issue #40 adds detection of a waiting app version without
+automatically reloading. The explicit action saves open files/settings, waits
+for active programs/dialogs/input, and retains the editor on save failures or
+workspace changes. Lint, strict typecheck, all 67 unit tests and the production
+build pass. An initial full run passed 229 of 231 browser cases. It exposed a
+Colors test that navigated before its asynchronous storage commit and a Vite
+preview 304 response that omitted isolation headers, blocking a WebKit worker
+restart. The test now observes the commit; preview middleware applies the same
+security headers before conditional static responses. All **36 focused checks**
+then pass across Chromium, Firefox and Playwright WebKit, covering all update
+cases, Colors persistence and conditional-response headers. The final expanded
+234-case suite was not rerun locally as a whole. Its CI result must be recorded
+in the PR before merge. The owner has since accepted the manual update test.
+
+Separate real service-worker upgrade checks pass at desktop size and in a narrow
+Fill layout: the cached version stays open until the action is chosen, then the
+replacement loads with saved source intact. Those upgrade-only checks stub Python;
+the browser suite separately exercises real Python input, debugger/reset and shell
+guards. Production delivery must be verified after merge. Older installed copies
+need the manual's one-time reopen steps to first acquire this update action.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports

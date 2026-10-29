@@ -31,6 +31,7 @@ import {
 import { COLOR_GROUPS, COLOR_NAMES, colorAttribute, windowColorGroup } from './colors';
 import { acknowledgesOutput, isSystemKey } from './keyboard';
 import { hotkey, type MenuItem, menus, plain } from './menus';
+import { activateAppUpdate, observeAppUpdates } from './updates';
 
 type WindowKind = 'editor' | 'messages' | 'watch' | 'output' | 'help' | 'project' | 'notes';
 interface IdeWindow {
@@ -146,6 +147,12 @@ export class Application {
   private readonly live = document.createElement('div');
   private readonly statusMirror = document.createElement('div');
   private readonly tools = document.createElement('nav');
+  private readonly updateNotice = document.createElement('aside');
+  private readonly updateMessage = document.createElement('span');
+  private readonly updateButton = document.createElement('button');
+  private waitingUpdate?: ServiceWorker;
+  private applyingUpdate = false;
+  private updateError = '';
   private readonly uploadInput = document.createElement('input');
   private readonly store = new WorkspaceStore();
   private readonly runtime = new PythonRuntime((event) => this.runtimeEvent(event));
@@ -237,6 +244,14 @@ export class Application {
     this.dialogMirror.className = 'sr-only';
     this.tools.className = 'tools';
     this.tools.setAttribute('aria-label', 'IDE commands');
+    this.updateNotice.className = 'update-notice';
+    this.updateNotice.hidden = true;
+    this.updateNotice.setAttribute('role', 'region');
+    this.updateNotice.setAttribute('aria-label', 'Application update');
+    this.updateMessage.setAttribute('aria-live', 'polite');
+    this.updateButton.textContent = 'Save and reload';
+    this.updateButton.addEventListener('click', () => void this.applyUpdate());
+    this.updateNotice.append(this.updateMessage, this.updateButton);
     for (const [label, command] of [
       ['Run', 'run'],
       ['Stop', 'stop'],
@@ -289,6 +304,7 @@ export class Application {
     });
     this.stage.append(this.canvas, this.input);
     this.root.append(
+      this.updateNotice,
       this.stage,
       this.tools,
       this.mirror,
@@ -445,10 +461,98 @@ export class Application {
       navigator.serviceWorker.addEventListener('controllerchange', controlled);
       navigator.serviceWorker
         .register('/sw.js')
-        .then(() => navigator.serviceWorker.ready)
+        .then((registration) => {
+          observeAppUpdates(registration, (worker) => {
+            if (this.waitingUpdate !== worker) this.updateError = '';
+            this.waitingUpdate = worker;
+            this.syncUpdateNotice();
+            this.dirty = true;
+          });
+          return navigator.serviceWorker.ready;
+        })
         .then(controlled)
         .catch(finish);
     });
+  }
+
+  private updateBusy(): boolean {
+    return !!(
+      this.runtime.running ||
+      this.runtimeStatus === 'installing' ||
+      this.pendingRun ||
+      this.inputWaiting ||
+      this.shell ||
+      this.dialog ||
+      this.composing
+    );
+  }
+
+  private syncUpdateNotice(): void {
+    const wasHidden = this.updateNotice.hidden;
+    const previous = this.updateMessage.textContent;
+    this.updateNotice.hidden = !this.waitingUpdate;
+    if (!this.waitingUpdate) {
+      if (!wasHidden) this.fit();
+      return;
+    }
+    this.updateButton.disabled = this.applyingUpdate || this.updateBusy();
+    const message = this.applyingUpdate
+      ? 'Saving your workspace and preparing the update…'
+      : this.updateError ||
+        (this.updateBusy()
+          ? 'Update available. Finish or stop the program and close dialogs or the shell to update.'
+          : 'Update available. Save your workspace and reload when ready.');
+    if (previous !== message) this.updateMessage.textContent = message;
+    if (wasHidden !== this.updateNotice.hidden || previous !== message) this.fit();
+  }
+
+  private async applyUpdate(): Promise<void> {
+    const worker = this.waitingUpdate;
+    if (!worker || this.applyingUpdate || this.updateBusy()) return;
+    const settingsState = () =>
+      JSON.stringify({
+        ...this.settings,
+        desktop: this.windows.flatMap((window) =>
+          window.editor ? [{ filename: window.editor.filename, ...window.bounds }] : [],
+        ),
+      });
+    const settingsSnapshot = settingsState();
+    const snapshot = this.windows.flatMap((window) =>
+      window.editor
+        ? [{ editor: window.editor, filename: window.editor.filename, text: window.editor.text }]
+        : [],
+    );
+    const unchanged = () => {
+      const editors = this.windows.flatMap((window) => (window.editor ? [window.editor] : []));
+      return (
+        !this.updateBusy() &&
+        settingsState() === settingsSnapshot &&
+        editors.length === snapshot.length &&
+        snapshot.every(
+          ({ editor, filename, text }) =>
+            editors.includes(editor) &&
+            editor.filename === filename &&
+            editor.text === text &&
+            !editor.modified,
+        )
+      );
+    };
+    this.applyingUpdate = true;
+    this.updateError = '';
+    this.syncUpdateNotice();
+    try {
+      await this.saveAll();
+      await this.store.saveSettings(this.settings);
+      if (!unchanged()) throw new Error('Your workspace changed. Review your edits and try again.');
+      await activateAppUpdate(worker);
+      if (!unchanged()) throw new Error('Your workspace changed. Review your edits and try again.');
+      location.reload();
+    } catch (error) {
+      this.updateError = `Could not reload: ${String(error)} Your editor remains open.`;
+    } finally {
+      this.applyingUpdate = false;
+      this.syncUpdateNotice();
+    }
   }
 
   private get active(): IdeWindow | undefined {
@@ -475,7 +579,11 @@ export class Application {
 
   private fit(): void {
     const mobile = matchMedia('(pointer: coarse), (max-width: 760px)').matches;
-    const height = Math.max(160, window.innerHeight - (mobile ? this.tools.offsetHeight + 10 : 0));
+    const noticeHeight = this.updateNotice.hidden ? 0 : this.updateNotice.offsetHeight + 10;
+    const height = Math.max(
+      160,
+      window.innerHeight - noticeHeight - (mobile ? this.tools.offsetHeight + 10 : 0),
+    );
     const cols =
       this.settings.screenMode === 'fill' ? Math.max(40, Math.floor(window.innerWidth / 9)) : 80;
     const rows =
@@ -634,6 +742,7 @@ export class Application {
   }
 
   private draw(): void {
+    this.syncUpdateNotice();
     const b = this.buffer;
     let cursor: { x: number; y: number; block: boolean } | undefined;
     if (this.quit) {

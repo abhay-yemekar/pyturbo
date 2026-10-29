@@ -82,6 +82,18 @@ another run until you have captured the result: a new run clears it.
 
 ## An old version keeps appearing
 
+If **Update available** appears, choose **Save and reload** when you are ready.
+PyTurbo saves open files and settings before switching versions. The action
+waits while a program/debugger, dialog, or Python shell is active. If a save
+fails or your workspace changes during the update, the editor stays open and
+you can review your work before retrying. Updates never reload the page merely
+because a new version was discovered.
+
+![An available PyTurbo update with the Save and reload action](../images/manual-update.png)
+
+Copies installed before this update action was added need the manual steps
+below once to load a version that includes it.
+
 PyTurbo caches the app so it can reopen offline. A local preview can therefore
 look usable even when its server has stopped, while still showing an earlier
 build.

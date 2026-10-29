@@ -25,6 +25,17 @@ export default defineConfig({
   preview: { headers },
   worker: { format: 'es' },
   plugins: [
+    {
+      name: 'preview-security-headers',
+      configurePreviewServer(server) {
+        // Static serving can return 304 before its setHeaders callback runs.
+        // Apply isolation headers first so cached worker restarts stay valid.
+        server.middlewares.use((_request, response, next) => {
+          for (const [name, value] of Object.entries(headers)) response.setHeader(name, value);
+          next();
+        });
+      },
+    },
     VitePWA({
       registerType: 'prompt',
       injectRegister: false,

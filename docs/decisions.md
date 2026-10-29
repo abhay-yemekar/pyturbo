@@ -41,6 +41,9 @@ confirmed clearing the previous output before each run. These are deliberate
 usability differences from the plan's retained console history and any-key return.
 The factory pause-after-run default remains off. Debugger resume and input within
 the same run retain that run's output.
+The owner also approved an explicit Update available → Save and reload action.
+It must save the workspace, wait for active work, and preserve source on save or
+activation failure; discovering an update alone must not reload the page.
 
 ## Available dependency pins
 

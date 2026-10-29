@@ -73,6 +73,27 @@ button:focus-visible {
 .touch-tools {
   display: none;
 }
+.update-notice {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: min(720px, 100%);
+  padding: 6px;
+  margin-bottom: 6px;
+  border: 1px solid #555;
+  color: #ffff55;
+  font-size: 13px;
+}
+.update-notice[hidden] {
+  display: none;
+}
+.update-notice button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
 .startup-error {
   position: fixed;
   top: 10px;
@@ -115,6 +136,7 @@ button:focus-visible {
 @media print {
   canvas,
   .tools,
+  .update-notice,
   .text-input,
   .stage {
     display: none;
