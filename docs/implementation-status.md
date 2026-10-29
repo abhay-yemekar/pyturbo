@@ -11,19 +11,19 @@ The agreed stack and scope remain in place. Implementation has crossed phase
 boundaries to address the owner's reported bugs, requested manual and approved
 update action. No phase is certified complete while its exit checks remain open.
 
-| Plan phase                     | Delivered or implemented                                                                                                         | Still open                                                                                        |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| 0 — Foundations                | Personal GitHub repository, CI/security settings, private task board, Pages production/previews, VGA renderer and browser Python | Original-IDE visual baselines and real browser/OS shortcut matrix                                 |
-| 1 — Turbo shell and Run        | Menus, windows, editor, compile/run/input/Stop, messages, browser file storage and sharing; accepted typing/output/save fixes    | Complete visual and real-device verification                                                      |
-| 2 — Feature parity             | Window management, search, packages/plots, Colors/preferences, Help, arguments and persistent editor options                     | Optimal Fill and Cursor Through Tabs (#33), plus remaining parity verification                    |
-| 3 — Debugger and nostalgia     | Trace/step/breakpoints, watches/evaluate/stack, multi-file projects and conio/graphics/turtle bridges                            | Complete debugger/graphics interaction and compatibility checks                                   |
-| 4 — Polish, mobile and offline | Base offline runtime, DOS/touch controls, illustrated public manual; owner-tested safe update action (#40)                       | Full CI/deployment verification, mobile/real-device checks, accessibility and performance budgets |
-| 5 — Launch                     | Release automation and an unpublished draft 0.1.0 proposal                                                                       | Final release gates, branding/launch assets and explicit publication decision; no v1 release      |
+| Plan phase                     | Delivered or implemented                                                                                                                            | Still open                                                                                   |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 0 — Foundations                | Personal GitHub repository, CI/security settings, private task board, Pages production/previews, VGA renderer and browser Python                    | Original-IDE visual baselines and real browser/OS shortcut matrix                            |
+| 1 — Turbo shell and Run        | Menus, windows, editor, compile/run/input/Stop, messages, browser file storage and sharing; accepted typing/output/save fixes                       | Complete visual and real-device verification                                                 |
+| 2 — Feature parity             | Window management, search, packages/plots, Colors/preferences, Help, arguments and persistent editor options; owner-tested F/R implementation (#33) | F/R PR/CI/deployment and remaining parity verification                                       |
+| 3 — Debugger and nostalgia     | Trace/step/breakpoints, watches/evaluate/stack, multi-file projects and conio/graphics/turtle bridges                                               | Complete debugger/graphics interaction and compatibility checks                              |
+| 4 — Polish, mobile and offline | Base offline runtime, DOS/touch controls, illustrated public manual, deployed safe updates (#41) and cursor choices (#43)                           | Mobile/real-device checks, accessibility and performance budgets                             |
+| 5 — Launch                     | Release automation and an unpublished draft 0.1.0 proposal                                                                                          | Final release gates, branding/launch assets and explicit publication decision; no v1 release |
 
-The owner tested and accepted **Save and reload** on 29 October using a separate
-two-version demo with the app's built Workbox service worker. The delivery
-checkpoint requires passing PR checks and deployment verification; the next
-feature work is **Optimal Fill and Cursor Through Tabs (#33)**. The original
+Safe updates and the cursor-style/manual additions passed owner testing, PR CI
+and deployed checks. Current work is **Optimal Fill and Cursor Through Tabs
+(#33)**. The owner accepted local testing on 29 October; PR CI and deployment
+verification remain pending. The original
 plan is preserved as a dated reference; [decisions.md](decisions.md) records
 approved changes such as Enter-only output return and clearing each new run.
 
@@ -49,7 +49,7 @@ commands may use simplified interactions rather than complete Turbo parity.
 ## Verification record
 
 - Whole-project lint and strict TypeScript checks pass.
-- All **67 unit tests** pass locally, including reference palettes,
+- All **88 unit tests** pass on the local #33 revision, including reference palettes,
   editor/storage behavior and system-shortcut handling. Coverage is measured
   separately for the configured scope; it does not cover the entire IDE.
 - The production build and PWA generation pass. Production preview applies the
@@ -130,8 +130,8 @@ Backspace Unindents. The owner's confirmed defaults retain space-only Tab with
 four-space stops and enable Backspace Unindents. These toggles and Ctrl+O I update
 validated persistent settings across open/new editors. Unit and browser regressions
 cover 3/7-space indentation, imported hard tabs, non-BMP columns, selection deletion,
-undo, settings and reloads. Optimal Fill and Cursor Through Tabs remain open;
-their approved defaults are recorded separately from implementation status.
+undo, settings and reloads. Optimal Fill and Cursor Through Tabs were deferred
+to #33; their current local status is recorded below.
 Screen preferences apply their layout before waiting for IndexedDB persistence,
 so an immediate Zoom command uses the newly selected screen dimensions.
 PR #32 passed all 150 browser cases, all other required checks, CodeQL and Pages,
@@ -184,6 +184,36 @@ the browser suite separately exercises real Python input, debugger/reset and she
 guards. Production delivery must be verified after merge. Older installed copies
 need the manual's one-time reopen steps to first acquire this update action.
 
+PR #41 subsequently passed all **234 browser CI cases**, the other required jobs,
+CodeQL and Pages, then merged as `9ba7ed9`. Thirteen Chromium scenarios passed
+on its exact preview and production, including real Python, output, the manual
+link and controlled update cases. Real Workbox two-version updates were checked
+separately in the owner-tested local demo. PR #43 added optional cursor styles and
+the illustrated manual entry; all **240 browser CI cases**, required checks,
+CodeQL and Pages passed before merge `d2fa83e`. Four preview and four production
+Chromium scenarios pass for cursor rendering/modes/persistence, the manual link
+and real Python input. Both features are deployed on the public site.
+
+The local #33 source now implements F/R preferences and shortcuts with the
+approved defaults. Virtual tab positions preserve source during navigation and
+support visual selection, clipboard/IME input, pointer placement, scrolling,
+undo and bookmarks. Optimal Fill packs edited leading whitespace on line change,
+including completed pasted lines, while preserving untouched imported lines and
+interior text. Find/replace-all remaps affected positions. Clipboard operations
+cannot delete later edits or paste into a changed target while permission is
+pending; repeated-character overwrite uses the intended native caret.
+All 15 focused tab cases pass across the three engines. The full local run passed
+254 of 255 cases; its Fill paging fixture expected a fixed height even when an
+update notice reduced the text body. That fixture now blocks service workers;
+separate controlled update tests check both the reduced page size and intentional
+scrolling. They also reproduced a hidden bottom-row caret after the notice
+appeared. Resizing now keeps a previously visible caret onscreen while preserving
+a view deliberately scrolled away from it. All **54 final affected browser
+checks** pass across Chromium, Firefox and Playwright WebKit. Lint, typecheck,
+88 unit tests, production build and 71 manual links/anchors pass. The expanded
+261-case suite has not been rerun as a whole. The owner accepted the local changes;
+the final PR CI result must be recorded before merge.
+
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
 only PyTurbo issues/PRs, and uses this repository as its default. Issue #1 is in
@@ -194,7 +224,7 @@ repository-level Actions permission needed for release PR creation; it is enable
 while default workflow token permissions remain read-only.
 The first automated release proposal incorrectly selected `1.0.0`. PR #11 fixed
 the initial version to `0.1.0`; PR #15 fixed generated-file lint and human-triggered
-PR checks. The updated proposal passes all five required jobs, CodeQL and Pages
+PR checks. The updated proposal at `68b4ad3` passes all five required jobs, CodeQL and Pages
 and remains an unpublished draft. No v1 release has been published.
 
 Record final command results in the PR validation record or update this file.
@@ -209,7 +239,7 @@ Successful builds and small geometry fixtures do not certify the whole product.
    modes. Commit only PyTurbo screenshots/baselines.
 4. Complete real browser/OS shortcut tests, Safari/iOS and Android checks. The
    owner approved continuing implementation while these checks remain open.
-5. Implement the remaining Ctrl+O F/R options in
+5. Complete PR CI and deployment of the owner-tested Ctrl+O F/R options in
    [editor-and-storage.md](editor-and-storage.md).
 6. Verify save failures/conflicts, IME, directional selections, clipboard,
    imported/shared projects, repeated modules, output floods and stop while

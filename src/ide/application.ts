@@ -329,6 +329,27 @@ export class Application {
       this.uploadInput,
     );
     this.input.addEventListener('input', () => this.textInput());
+    for (const kind of ['copy', 'cut'] as const)
+      this.input.addEventListener(kind, (event) => {
+        const editor = this.editor;
+        if (
+          this.dialog ||
+          this.userScreen ||
+          !editor ||
+          !event.clipboardData ||
+          !editor.selectedText
+        )
+          return;
+        this.clipboard = editor.selectedText;
+        event.clipboardData.setData('text/plain', this.clipboard);
+        event.preventDefault();
+        if (kind === 'cut') {
+          editor.replaceSelection('');
+          this.keepCursorVisible();
+          this.syncInput();
+          this.dirty = true;
+        }
+      });
     this.root.addEventListener('pointerdown', (event) => {
       if (event.button === 0 && (event.target === this.root || event.target === this.stage)) {
         event.preventDefault();
@@ -352,7 +373,7 @@ export class Application {
         const editor = this.active.editor;
         if (this.composing) return;
         const expected = editor.selection;
-        const expectedDirection = editor.cursor < (editor.anchor ?? 0) ? 'backward' : 'forward';
+        const expectedDirection = editor.selectionDirection;
         if (
           this.input.selectionStart === expected.from &&
           this.input.selectionEnd === expected.to &&
@@ -604,9 +625,23 @@ export class Application {
         ? Math.max(15, Math.floor(height / 16))
         : this.settings.rows;
     if (cols !== this.buffer.cols || rows !== this.buffer.rows) {
+      const editor = this.editor;
+      const bounds = this.active?.bounds;
+      const position = editor?.visualPosition;
+      const caretWasVisible =
+        editor &&
+        bounds &&
+        position &&
+        position.line >= editor.scrollY &&
+        position.line < editor.scrollY + bounds.h - 2 &&
+        position.col >= editor.scrollX &&
+        position.col < editor.scrollX + bounds.w - 2;
       this.buffer = new CellBuffer(cols, rows);
       this.renderer.setBuffer(this.buffer);
       for (const window of this.windows) this.clamp(window);
+      // A smaller text body must keep an onscreen caret visible without
+      // undoing a deliberate scroll that had already moved it out of view.
+      if (caretWasVisible) this.keepCursorVisible();
     }
     const available = Math.min(window.innerWidth / (cols * 9), height / (rows * 16));
     const scale = available >= 1 ? Math.max(1, Math.floor(available)) : available;
@@ -638,6 +673,8 @@ export class Application {
     editor.autoIndent = this.settings.autoIndent;
     editor.useTabCharacter = this.settings.useTabCharacter;
     editor.backspaceUnindents = this.settings.backspaceUnindents;
+    editor.cursorThroughTabs = this.settings.cursorThroughTabs;
+    editor.optimalFill = this.settings.optimalFill;
     editor.cuaKeys = this.settings.cuaKeys;
     const offset = this.windows.length % 6;
     const window: IdeWindow = {
@@ -676,14 +713,19 @@ export class Application {
     this.input.setAttribute('aria-label', this.userScreen ? 'Program input' : 'Python editor');
     if (editor && !this.userScreen) {
       const selection = editor.selection;
-      const direction = editor.cursor < (editor.anchor ?? 0) ? 'backward' : 'forward';
+      const direction = editor.selectionDirection;
+      const position = editor.visualPosition;
+      this.input.setAttribute(
+        'aria-description',
+        `Line ${position.line + 1}, column ${position.col + 1}`,
+      );
       if (
         this.input.selectionStart !== selection.from ||
         this.input.selectionEnd !== selection.to ||
         (selection.from !== selection.to && this.input.selectionDirection !== direction)
       )
         this.input.setSelectionRange(selection.from, selection.to, direction);
-    }
+    } else this.input.removeAttribute('aria-description');
     this.syncMirror();
   }
 
@@ -712,21 +754,7 @@ export class Application {
     }
     const editor = this.editor;
     if (!editor) return;
-    const next = this.input.value.replace(/\r\n?/g, '\n');
-    const old = editor.text;
-    let start = 0;
-    while (start < old.length && start < next.length && old[start] === next[start]) start++;
-    let end = old.length;
-    let nextEnd = next.length;
-    while (end > start && nextEnd > start && old[end - 1] === next[nextEnd - 1]) {
-      end--;
-      nextEnd--;
-    }
-    editor.moveTo(start);
-    editor.anchor = end > start ? end : null;
-    if (end === start && !editor.insertMode) editor.insert(next.slice(start, nextEnd));
-    else editor.replaceSelection(next.slice(start, nextEnd));
-    editor.moveTo(this.input.selectionEnd);
+    editor.applyNativeInput(this.input.value, this.input.selectionEnd);
     this.dirty = true;
     this.keepCursorVisible();
     this.syncInput();
@@ -835,7 +863,7 @@ export class Application {
         const p = this.editorPosition(editor, layout);
         const r = this.active.bounds;
         const line = layout.lines[p.line] ?? '';
-        const visualCol = this.visualColumn(line, p.col);
+        const visualCol = this.visualColumn(line, p.col) + editor.tabOffset;
         cursor = {
           x: r.x + 1 + visualCol - editor.scrollX,
           y: r.y + 1 + p.line - editor.scrollY,
@@ -942,7 +970,7 @@ export class Application {
     if (!editor || !bounds) return;
     const layout = this.editorLayout(editor);
     const p = this.editorPosition(editor, layout);
-    const x = this.visualColumn(layout.lines[p.line] ?? '', p.col);
+    const x = this.visualColumn(layout.lines[p.line] ?? '', p.col) + editor.tabOffset;
     if (p.line < editor.scrollY) editor.scrollY = p.line;
     if (p.line >= editor.scrollY + bounds.h - 2) editor.scrollY = p.line - bounds.h + 3;
     if (x < editor.scrollX) editor.scrollX = x;
@@ -983,7 +1011,7 @@ export class Application {
       editor.scrollY = Math.max(0, Math.min(maxY, editor.scrollY));
       const maxX = Math.max(0, layout.maxWidth - (r.w - 2));
       editor.scrollX = Math.max(0, Math.min(maxX, editor.scrollX));
-      const selection = editor.selection;
+      const selectedCell = editor.selectionTester();
       for (
         let lineNo = editor.scrollY;
         lineNo < Math.min(lines.length, editor.scrollY + r.h - 2);
@@ -1009,11 +1037,12 @@ export class Application {
           let index = 0;
           for (const ch of line) {
             const width = ch === '\t' ? this.settings.tabSize - (col % this.settings.tabSize) : 1;
-            const selected = offset + index >= selection.from && offset + index < selection.to;
             const role = layout.roles[offset + index] ?? 'normal';
             const token = this.attr(role, PYTHON_TOKEN_ATTRIBUTES[role]);
-            const attr = selected ? this.attr('selection', 0x71) : (bar ?? token);
             for (let part = 0; part < width; part++) {
+              const attr = selectedCell(offset + index, ch === '\t' ? part : 0)
+                ? this.attr('selection', 0x71)
+                : (bar ?? token);
               const x = r.x + 1 + col + part - editor.scrollX;
               if (x > r.x && x < r.x + r.w - 1) b.set(x, y, ch === '\t' ? ' ' : ch, attr);
             }
@@ -1028,7 +1057,7 @@ export class Application {
         b.text(
           r.x + 2,
           r.y + r.h - 1,
-          `${editor.modified ? '*' : ' '} ${p.line + 1}:${this.visualColumn(lines[p.line] ?? '', p.col) + 1} `.padEnd(
+          `${editor.modified ? '*' : ' '} ${p.line + 1}:${this.visualColumn(lines[p.line] ?? '', p.col) + editor.tabOffset + 1} `.padEnd(
             14,
             '═',
           ),
@@ -1602,6 +1631,7 @@ export class Application {
     }
     let previousEditor = this.editor;
     let previousCursor = previousEditor?.cursor;
+    let previousTab = previousEditor?.tabOffset;
     let previousText = previousEditor?.text;
     const followChangedEditor = () => {
       const editor = this.editor;
@@ -1609,6 +1639,7 @@ export class Application {
         editor &&
         (editor !== previousEditor ||
           editor.cursor !== previousCursor ||
+          editor.tabOffset !== previousTab ||
           editor.text !== previousText)
       ) {
         this.keepCursorVisible();
@@ -1617,6 +1648,7 @@ export class Application {
       }
       previousEditor = editor;
       previousCursor = editor?.cursor;
+      previousTab = editor?.tabOffset;
       previousText = editor?.text;
     };
     this.dismissDialog();
@@ -1799,6 +1831,7 @@ export class Application {
   private async execute(command: string): Promise<void> {
     const editor = this.editor;
     const previousCursor = editor?.cursor;
+    const previousTab = editor?.tabOffset;
     const previousText = editor?.text;
     switch (command) {
       case 'repaint':
@@ -1831,6 +1864,8 @@ export class Application {
           this.settings.autoIndent = editor.autoIndent;
           this.settings.useTabCharacter = editor.useTabCharacter;
           this.settings.backspaceUnindents = editor.backspaceUnindents;
+          this.settings.cursorThroughTabs = editor.cursorThroughTabs;
+          this.settings.optimalFill = editor.optimalFill;
           this.applyEditorOptions();
           await this.saveSettings();
         }
@@ -1942,19 +1977,41 @@ export class Application {
       case 'cut':
         if (editor?.selectedText) {
           this.clipboard = editor.selectedText;
-          await navigator.clipboard.writeText(this.clipboard).catch(() => {});
           editor.replaceSelection('');
+          this.keepCursorVisible();
+          this.syncInput();
+          this.dirty = true;
+          await navigator.clipboard.writeText(this.clipboard).catch(() => {});
         }
         break;
       case 'paste':
         if (editor) {
+          const original = editor.text;
+          const cursor = editor.cursorPoint;
+          const range = editor.selection;
+          const selected = editor.selectedText;
+          const direction = editor.selectionDirection;
           let text = this.clipboard;
           try {
             text = await navigator.clipboard.readText();
           } catch {
             if (!text) this.announce('Use Ctrl+V to paste from the system clipboard.');
           }
-          if (text) editor.insert(text);
+          const current = editor.cursorPoint;
+          if (
+            this.editor !== editor ||
+            this.dialog ||
+            this.userScreen ||
+            editor.text !== original ||
+            cursor.offset !== current.offset ||
+            cursor.tabOffset !== current.tabOffset ||
+            range.from !== editor.selection.from ||
+            range.to !== editor.selection.to ||
+            selected !== editor.selectedText ||
+            direction !== editor.selectionDirection
+          )
+            this.announce('Paste cancelled because the editor changed. Paste again when ready.');
+          else if (text) editor.insert(text);
         }
         break;
       case 'clear':
@@ -2463,6 +2520,7 @@ export class Application {
       this.editor &&
       (this.editor !== editor ||
         this.editor.cursor !== previousCursor ||
+        this.editor.tabOffset !== previousTab ||
         this.editor.text !== previousText)
     )
       this.keepCursorVisible();
@@ -2737,8 +2795,18 @@ export class Application {
           type: 'select',
           options: Object.values(CURSOR_OPTIONS),
         },
+        {
+          label: 'Cursor through tabs',
+          value: String(this.settings.cursorThroughTabs),
+          type: 'checkbox',
+        },
+        {
+          label: 'Optimal fill',
+          value: String(this.settings.optimalFill),
+          type: 'checkbox',
+        },
       ],
-      async ([tab, indent, useTab, unindent, cua, cursor]) => {
+      async ([tab, indent, useTab, unindent, cua, cursor, throughTabs, optimalFill]) => {
         const size = Number(tab);
         if (!Number.isInteger(size) || size < 1 || size > 16)
           throw new Error('Tab size must be between 1 and 16.');
@@ -2752,6 +2820,8 @@ export class Application {
         this.settings.backspaceUnindents = unindent === 'true';
         this.settings.cuaKeys = cua === 'true';
         this.settings.cursorStyle = style;
+        this.settings.cursorThroughTabs = throughTabs === 'true';
+        this.settings.optimalFill = optimalFill === 'true';
         this.applyEditorOptions();
         await this.saveSettings();
       },
@@ -2764,8 +2834,12 @@ export class Application {
         window.editor.autoIndent = this.settings.autoIndent;
         window.editor.useTabCharacter = this.settings.useTabCharacter;
         window.editor.backspaceUnindents = this.settings.backspaceUnindents;
+        window.editor.cursorThroughTabs = this.settings.cursorThroughTabs;
+        window.editor.optimalFill = this.settings.optimalFill;
         window.editor.cuaKeys = this.settings.cuaKeys;
+        window.editor.clampVirtualPositions();
       }
+    this.keepCursorVisible();
   }
   private evaluateDialog(inspect: boolean): void {
     if (this.runtimeStatus !== 'paused') {
@@ -3346,6 +3420,7 @@ export class Application {
       }
       const previousEditor = this.editor;
       const previousCursor = previousEditor.cursor;
+      const previousTab = previousEditor.tabOffset;
       const previousText = previousEditor.text;
       if (previousEditor.handleKey(event, (this.active?.bounds.h ?? 22) - 2)) {
         event.preventDefault();
@@ -3368,6 +3443,7 @@ export class Application {
           this.editor &&
           (this.editor !== previousEditor ||
             this.editor.cursor !== previousCursor ||
+            this.editor.tabOffset !== previousTab ||
             this.editor.text !== previousText)
         )
           this.keepCursorVisible();
@@ -3614,12 +3690,8 @@ export class Application {
     if (!editor) return;
     const r = window.bounds;
     const lineNo = Math.max(0, Math.min(editor.lines.length - 1, y - r.y - 1 + editor.scrollY));
-    const line = editor.lines[lineNo] ?? '';
     const target = x - r.x - 1 + editor.scrollX;
-    let col = 0;
-    while (col < line.length && this.visualColumn(line, col) < target)
-      col += (line.codePointAt(col) ?? 0) > 0xffff ? 2 : 1;
-    editor.moveTo(editor.offsetAt(lineNo, col), select);
+    editor.gotoVisual(lineNo, target, select);
     this.keepCursorVisible();
     this.syncInput();
   }

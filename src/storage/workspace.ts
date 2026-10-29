@@ -21,6 +21,8 @@ export interface WorkspaceSettings {
   autoIndent: boolean;
   useTabCharacter: boolean;
   backspaceUnindents: boolean;
+  cursorThroughTabs: boolean;
+  optimalFill: boolean;
   cuaKeys: boolean;
   textMouse: boolean;
   stderrColor: boolean;
@@ -40,6 +42,8 @@ export const defaultSettings: WorkspaceSettings = {
   autoIndent: true,
   useTabCharacter: false,
   backspaceUnindents: true,
+  cursorThroughTabs: true,
+  optimalFill: false,
   cuaKeys: true,
   textMouse: false,
   stderrColor: true,
@@ -107,6 +111,8 @@ export function normalizeSettings(value: unknown): WorkspaceSettings {
     'autoIndent',
     'useTabCharacter',
     'backspaceUnindents',
+    'cursorThroughTabs',
+    'optimalFill',
     'cuaKeys',
     'textMouse',
     'stderrColor',

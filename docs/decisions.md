@@ -34,8 +34,8 @@ checks remain explicitly open. Automated Chromium, Firefox and Playwright WebKit
 results do not certify Safari, macOS/iOS, Android or physical shortcut capture.
 For editor whitespace options, the owner confirmed space-only Tab insertion and
 Optimal Fill off by default, with Backspace Unindents and Cursor Through Tabs on.
-The four-space tab width stays unchanged. Recording these defaults does not
-establish implementation of the remaining Optimal Fill or Cursor Through Tabs options.
+The four-space tab width stays unchanged. Implementation and verification of
+these choices are tracked separately in [implementation-status.md](implementation-status.md).
 On 28 October the owner requested Enter-only return from completed output and
 confirmed clearing the previous output before each run. These are deliberate
 usability differences from the plan's retained console history and any-key return.

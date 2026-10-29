@@ -44,10 +44,14 @@ describe('workspace storage', () => {
       rows: 50,
       pauseAfterRun: true,
       cursorStyle: 'bar',
+      cursorThroughTabs: false,
+      optimalFill: true,
     });
     expect((await store.loadFiles()).map((file) => file.name)).toEqual(['lib/util.py', 'main.py']);
     expect((await store.loadSettings()).pauseAfterRun).toBe(true);
     expect((await store.loadSettings()).cursorStyle).toBe('bar');
+    expect((await store.loadSettings()).cursorThroughTabs).toBe(false);
+    expect((await store.loadSettings()).optimalFill).toBe(true);
     await store.deleteFile('main.py');
     expect(await store.loadFile('main.py')).toBeUndefined();
     expect(await store.loadFiles()).toHaveLength(1);
@@ -82,6 +86,8 @@ describe('workspace storage', () => {
       rows: 99,
       tabSize: -1,
       cursorStyle: 'unknown',
+      cursorThroughTabs: 'true',
+      optimalFill: 1,
       useTabCharacter: 'yes',
       backspaceUnindents: null,
       screenMode: 'bad',
@@ -92,6 +98,8 @@ describe('workspace storage', () => {
     expect(settings.rows).toBe(25);
     expect(settings.tabSize).toBe(4);
     expect(settings.cursorStyle).toBe('underline');
+    expect(settings.cursorThroughTabs).toBe(true);
+    expect(settings.optimalFill).toBe(false);
     expect(settings.useTabCharacter).toBe(false);
     expect(settings.backspaceUnindents).toBe(true);
     expect(settings.pauseAfterRun).toBe(false);

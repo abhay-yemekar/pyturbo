@@ -2,7 +2,10 @@
 
 The editor works before Python loads. `EditorBuffer` stores source as a UTF-16 string and
 normalizes imported CRLF and CR newlines to LF. Positions returned by `position` and `goto`
-are zero based. The host displays one-based line and column numbers.
+are zero based source offsets/columns. A separate virtual tab-cell offset keeps
+the caret and CUA selection endpoints inside hard tabs without modifying text.
+`visualPosition` reports the expanded cell column. The host displays one-based
+line and visual-column numbers, including an accessible editor description.
 
 ## Editing and keys
 
@@ -16,8 +19,11 @@ copies existing whitespace; Python's colon rule still adds one level of spaces.
 Backspace Unindents, enabled by default, moves leading whitespace to the nearest
 preceding nonblank line's smaller indentation, falling back to column zero. It preserves
 the rest of the line and splits a tab only when the target falls inside its cells.
-Outside leading whitespace, or when the option is off, Backspace deletes one source
-character; a selected range is deleted exactly. Insert switches between insertion and overwrite. Overwrite never
+Outside leading whitespace, or when the option is off, Backspace normally deletes
+one character. With Cursor Through Tabs on, Backspace after a tab leaves its width
+minus one as spaces. From inside a tab it retains the prefix before the caret,
+drops the remainder and removes one cell; Delete retains the prefix and drops the
+remainder. A selected range is deleted exactly. Insert switches between insertion and overwrite. Overwrite never
 consumes a newline. Surrogate pairs move and delete together.
 
 Undo/redo keeps up to 200 edit snapshots. A saved-content marker determines whether the
@@ -48,6 +54,7 @@ Loading via `setText()` clears that history.
 | Ctrl+T / Ctrl+N                     | Delete next word / insert an empty line                                           |
 | Ctrl+L                              | Repeat the last search                                                            |
 | Ctrl+O I / T / U                    | Toggle auto-indent / Use Tab Character / Backspace Unindents                      |
+| Ctrl+O F / R                        | Toggle Optimal Fill / Cursor Through Tabs                                         |
 
 The legacy movement aliases Ctrl+S/D/E/X, Ctrl+F/A, Ctrl+W/Z, Ctrl+R/C, Ctrl+G/H, and
 Ctrl+V work where they do not conflict with enabled CUA shortcuts. Ctrl+A/C/X/V/Z belong
@@ -64,7 +71,7 @@ literally, including `$` characters.
 
 Page keys use the active editor's visible text height minus one, retaining an overlap
 row and the caret's screen row. Ctrl+Home/End and Ctrl+Q E/X use the viewport's first/last
-text line and preserve the source column. The host supplies the current body height
+text line and preserve the expanded visual column. The host supplies the current body height
 after resize, zoom, 43/50-line or Fill changes. Ctrl+R/C share that page distance when
 CUA keys are disabled. File-boundary commands remain separate. A page can leave blank
 rows below EOF rather than packing the final viewport and moving the caret upward.
@@ -76,13 +83,30 @@ including other open files and subsequently created editors. Dialog Cancel does 
 draft choices. The original options dialog and 3/7-space Backspace probe establish the
 tab/unindent meanings; no original screenshots are shipped.
 
-Ctrl+O F (Optimal Fill) and Ctrl+O R (Cursor Through Tabs) remain unimplemented.
-Private probes establish that Optimal Fill packs leading whitespace into tabs when
-leaving an edited line, and Cursor Through Tabs permits arrow positions inside an
-expanded tab without editing the file. Those semantics require further buffer work;
-no alternative behavior is silently assigned to them. Bookmarks and undo history are session state, not
-persisted file metadata. Unicode grapheme clusters beyond surrogate pairs are not yet
-treated as indivisible cursor units.
+Cursor Through Tabs defaults on. Turning it off while inside a tab retains that
+position until movement; subsequent navigation snaps to source boundaries. Private
+reference probes verify vertical movement to the right edge of a tab when off,
+insertion with a real tab remainder (including the last tab cell), Backspace/Delete
+and newline behavior. Legacy block markers remain source-character anchors; CUA
+selections support partial tab cells. Full tabs copy verbatim; partial boundary
+tabs copy as spaces. Native copy/cut handlers preserve that distinction, and paste
+reconciles virtual selections with the textarea's enclosing source range. Delayed
+menu clipboard access cannot delete later edits or paste into a changed target.
+Synthetic clipboard/IME tests are separate from real OS verification.
+
+Optimal Fill defaults off and is independent of space-only Tab insertion. When
+enabled, leaving an edited line packs its leading whitespace to the minimum tab/
+space prefix while retaining visual columns. Completed pasted lines are packed;
+the active line stays editable. Untouched imported lines and interior whitespace
+are preserved. Find/replace-all, selections and bookmark positions are remapped
+when packing changes source offsets. Edits and completed-line packing undo
+together; navigation-triggered packing has its own recoverable snapshot. The
+option is not paragraph wrapping. Saving/compiling do not themselves leave the
+line or trigger extra rewriting.
+
+Undo snapshots and session bookmarks include virtual tab positions. Bookmarks and
+undo history are session state, not persisted file metadata. Unicode grapheme
+clusters beyond surrogate pairs are not yet treated as indivisible cursor units.
 
 ## Syntax colors
 
@@ -110,8 +134,8 @@ to the Python worker's filesystem. `loadFiles()` validates persisted records rat
 trusting hand-edited or stale database data.
 
 Settings default to Exact 80×25, green identifiers, pause after run off, color video mode,
-four-space tabs, space-only Tab insertion, auto-indent, Backspace Unindents, and CUA
-shortcuts. Settings include arguments, per-role
+four-space tabs, space-only Tab insertion, auto-indent, Backspace Unindents,
+Cursor Through Tabs on, Optimal Fill off, and CUA shortcuts. Settings include arguments, per-role
 colors, and desktop window bounds. Stored settings are validated; unsupported values
 fall back to the agreed defaults. File content, bookmarks, breakpoints, and undo history
 are not embedded inside settings.

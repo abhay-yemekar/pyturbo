@@ -112,9 +112,15 @@ second key. You do not have to keep Ctrl held for the second key.
 | Ctrl+Q, 0–9       | Jump to a bookmark                                     |
 | Ctrl+Q, F / A     | Find / replace                                         |
 | Ctrl+O, I / T / U | Toggle auto-indent / literal Tab / Backspace Unindents |
+| Ctrl+O, F / R     | Toggle Optimal Fill / Cursor Through Tabs              |
 
 The [developer editor notes](../editor-and-storage.md) describe additional
-legacy sequences and their limitations. Optimal Fill and Cursor Through Tabs
-are still pending; an accepted default is not a shipped option.
+legacy sequences and their limitations. [Editor preferences](settings-and-troubleshooting.md#editor-preferences)
+explain how the tab options affect navigation and stored indentation.
+
+Shift+movement and pointer selection can select part of a tab. Copying just
+those cells produces spaces; copying a complete tab preserves the tab character.
+Cutting or replacing a partial tab changes only the selected cells and expands
+the boundary tab as needed. Pure caret movement leaves the file unchanged.
 
 **Next:** [Running and debugging →](running-and-debugging.md)

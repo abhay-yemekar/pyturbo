@@ -1,3 +1,12 @@
+import {
+  comparePoints,
+  pointAtColumn,
+  pointRangeText,
+  type TextPoint,
+  tabWidthAt,
+  textColumn,
+} from './text-point';
+
 export interface Selection {
   from: number;
   to: number;
@@ -14,7 +23,11 @@ interface Snapshot {
   text: string;
   cursor: number;
   anchor: number | null;
+  cursorTab: number;
+  anchorTab: number;
   bookmarks: Array<[number, number]>;
+  bookmarkTabs: Array<[number, number]>;
+  editedLine: number | null;
 }
 
 const HISTORY_LIMIT = 200;
@@ -25,8 +38,10 @@ const escapePattern = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\
 export class EditorBuffer {
   text: string;
   filename: string;
-  cursor = 0;
-  anchor: number | null = null;
+  private cursorOffset = 0;
+  private cursorTab = 0;
+  private anchorOffset: number | null = null;
+  private anchorTab = 0;
   modified = false;
   scrollX = 0;
   scrollY = 0;
@@ -35,17 +50,24 @@ export class EditorBuffer {
   autoIndent = true;
   useTabCharacter = false;
   backspaceUnindents = true;
+  cursorThroughTabs = true;
+  optimalFill = false;
   cuaKeys = true;
   pendingCommand: string | null = null;
   blockVisible = true;
   readonly bookmarks = new Map<number, number>();
+  private readonly bookmarkTabs = new Map<number, number>();
   private savedText: string;
   private undoStack: Snapshot[] = [];
   private redoStack: Snapshot[] = [];
   private prefix: 'k' | 'q' | 'o' | null = null;
   private blockStart: number | null = null;
   private blockEnd: number | null = null;
+  private blockStartTab = 0;
+  private blockEndTab = 0;
+  private editedLine: number | null = null;
   private previousPosition = 0;
+  private previousTab = 0;
   private preferredColumn: number | null = null;
   private lastSearch = '';
 
@@ -53,6 +75,88 @@ export class EditorBuffer {
     this.filename = filename;
     this.text = text.replace(/\r\n?/g, '\n');
     this.savedText = this.text;
+  }
+
+  get cursor(): number {
+    return this.cursorOffset;
+  }
+  set cursor(offset: number) {
+    this.cursorOffset = offset;
+    this.cursorTab = 0;
+  }
+  get anchor(): number | null {
+    return this.anchorOffset;
+  }
+  set anchor(offset: number | null) {
+    this.anchorOffset = offset;
+    this.anchorTab = 0;
+  }
+
+  private point(offset: number, tabOffset = 0): TextPoint {
+    offset = Math.max(0, Math.min(Math.trunc(offset), this.text.length));
+    return {
+      offset,
+      tabOffset:
+        this.text[offset] === '\t'
+          ? Math.max(0, Math.min(tabOffset, tabWidthAt(this.text, offset, this.tabSize) - 1))
+          : 0,
+    };
+  }
+
+  get cursorPoint(): TextPoint {
+    return this.point(this.cursor, this.cursorTab);
+  }
+  get tabOffset(): number {
+    return this.cursorPoint.tabOffset;
+  }
+  get visualPosition(): { line: number; col: number } {
+    const { line, col } = this.position;
+    return { line, col: textColumn(this.lines[line] ?? '', col, this.tabSize) + this.tabOffset };
+  }
+  get selectionDirection(): 'backward' | 'forward' {
+    return this.anchor !== null &&
+      comparePoints(this.cursorPoint, this.point(this.anchor, this.anchorTab)) < 0
+      ? 'backward'
+      : 'forward';
+  }
+  get virtualSelection(): boolean {
+    return this.tabOffset > 0 || this.anchorTab > 0;
+  }
+
+  private get selectionPoints(): { from: TextPoint; to: TextPoint } {
+    if (this.anchor !== null) {
+      const a = this.point(this.anchor, this.anchorTab);
+      const b = this.cursorPoint;
+      return comparePoints(a, b) <= 0 ? { from: a, to: b } : { from: b, to: a };
+    }
+    if (this.blockVisible && this.blockStart !== null && this.blockEnd !== null) {
+      const a = this.point(this.blockStart, this.blockStartTab);
+      const b = this.point(this.blockEnd, this.blockEndTab);
+      return comparePoints(a, b) <= 0 ? { from: a, to: b } : { from: b, to: a };
+    }
+    return { from: this.cursorPoint, to: this.cursorPoint };
+  }
+
+  private get hasSelection(): boolean {
+    const { from, to } = this.selectionPoints;
+    return comparePoints(from, to) !== 0;
+  }
+
+  selectedCell(offset: number, tabOffset = 0): boolean {
+    return this.selectionTester()(offset, tabOffset);
+  }
+
+  selectionTester(): (offset: number, tabOffset?: number) => boolean {
+    const { from, to } = this.selectionPoints;
+    return (offset, tabOffset = 0) => {
+      const cell = { offset, tabOffset };
+      return comparePoints(cell, from) >= 0 && comparePoints(cell, to) < 0;
+    };
+  }
+
+  clampVirtualPositions(): void {
+    this.cursorTab = this.tabOffset;
+    this.anchorTab = this.anchor === null ? 0 : this.point(this.anchor, this.anchorTab).tabOffset;
   }
 
   get lines(): string[] {
@@ -66,21 +170,13 @@ export class EditorBuffer {
   }
 
   get selection(): Selection {
-    if (this.anchor !== null) {
-      return { from: Math.min(this.anchor, this.cursor), to: Math.max(this.anchor, this.cursor) };
-    }
-    if (this.blockVisible && this.blockStart !== null && this.blockEnd !== null) {
-      return {
-        from: Math.min(this.blockStart, this.blockEnd),
-        to: Math.max(this.blockStart, this.blockEnd),
-      };
-    }
-    return { from: this.cursor, to: this.cursor };
+    const { from, to } = this.selectionPoints;
+    return { from: from.offset, to: to.offset + (this.hasSelection && to.tabOffset ? 1 : 0) };
   }
 
   get selectedText(): string {
-    const { from, to } = this.selection;
-    return this.text.slice(from, to);
+    const { from, to } = this.selectionPoints;
+    return pointRangeText(this.text, from, to, this.tabSize);
   }
 
   setText(text: string, modified = false): void {
@@ -91,6 +187,8 @@ export class EditorBuffer {
     this.undoStack = [];
     this.redoStack = [];
     this.bookmarks.clear();
+    this.bookmarkTabs.clear();
+    this.editedLine = null;
     if (!modified) this.savedText = this.text;
     this.modified = modified;
   }
@@ -105,7 +203,11 @@ export class EditorBuffer {
       text: this.text,
       cursor: this.cursor,
       anchor: this.anchor,
+      cursorTab: this.tabOffset,
+      anchorTab: this.anchorTab,
       bookmarks: [...this.bookmarks],
+      bookmarkTabs: [...this.bookmarkTabs],
+      editedLine: this.editedLine,
     };
   }
 
@@ -119,8 +221,13 @@ export class EditorBuffer {
     this.text = snapshot.text;
     this.cursor = snapshot.cursor;
     this.anchor = snapshot.anchor;
+    this.cursorTab = snapshot.cursorTab;
+    this.anchorTab = snapshot.anchorTab;
     this.bookmarks.clear();
     for (const [key, value] of snapshot.bookmarks) this.bookmarks.set(key, value);
+    this.bookmarkTabs.clear();
+    for (const [key, value] of snapshot.bookmarkTabs) this.bookmarkTabs.set(key, value);
+    this.editedLine = snapshot.editedLine;
     this.clearBlock();
     this.modified = this.text !== this.savedText;
     this.preferredColumn = null;
@@ -129,9 +236,61 @@ export class EditorBuffer {
   private clearBlock(): void {
     this.blockStart = null;
     this.blockEnd = null;
+    this.blockStartTab = 0;
+    this.blockEndTab = 0;
   }
 
-  private replaceRange(from: number, to: number, replacement: string): void {
+  private compactLine(line: number, record: boolean): (point: TextPoint) => TextPoint {
+    const start = this.offsetAt(line);
+    const prefix = this.lines[line]?.match(/^[ \t]*/)?.[0] ?? '';
+    const width = textColumn(prefix, prefix.length, this.tabSize);
+    const packed = '\t'.repeat(Math.floor(width / this.tabSize)) + ' '.repeat(width % this.tabSize);
+    if (packed === prefix) return (point) => point;
+    const delta = packed.length - prefix.length;
+    const map = (point: TextPoint): TextPoint => {
+      if (point.offset < start) return point;
+      if (point.offset >= start + prefix.length) return { ...point, offset: point.offset + delta };
+      const column = textColumn(prefix, point.offset - start, this.tabSize) + point.tabOffset;
+      const moved = pointAtColumn(packed, column, this.tabSize, true);
+      return { offset: start + moved.offset, tabOffset: moved.tabOffset };
+    };
+    const cursor = map(this.cursorPoint);
+    const anchor = this.anchor === null ? null : map(this.point(this.anchor, this.anchorTab));
+    const previous = map(this.point(this.previousPosition, this.previousTab));
+    const blockStart =
+      this.blockStart === null ? null : map(this.point(this.blockStart, this.blockStartTab));
+    const blockEnd =
+      this.blockEnd === null ? null : map(this.point(this.blockEnd, this.blockEndTab));
+    const bookmarks = [...this.bookmarks].map(
+      ([key, offset]) => [key, map(this.point(offset, this.bookmarkTabs.get(key) ?? 0))] as const,
+    );
+    if (record) this.remember();
+    this.text = this.text.slice(0, start) + packed + this.text.slice(start + prefix.length);
+    this.cursor = cursor.offset;
+    this.cursorTab = cursor.tabOffset;
+    this.anchor = anchor?.offset ?? null;
+    this.anchorTab = anchor?.tabOffset ?? 0;
+    this.previousPosition = previous.offset;
+    this.previousTab = previous.tabOffset;
+    this.blockStart = blockStart?.offset ?? null;
+    this.blockStartTab = blockStart?.tabOffset ?? 0;
+    this.blockEnd = blockEnd?.offset ?? null;
+    this.blockEndTab = blockEnd?.tabOffset ?? 0;
+    for (const [key, point] of bookmarks) {
+      this.bookmarks.set(key, point.offset);
+      this.bookmarkTabs.set(key, point.tabOffset);
+    }
+    this.modified = this.text !== this.savedText;
+    return map;
+  }
+
+  private finishEdit(fromLine: number): void {
+    if (this.optimalFill)
+      for (let line = fromLine; line < this.position.line; line++) this.compactLine(line, false);
+    this.editedLine = this.position.line;
+  }
+
+  private replaceRange(from: number, to: number, replacement: string, record = true): void {
     from = Math.max(0, Math.min(from, this.text.length));
     to = Math.max(from, Math.min(to, this.text.length));
     replacement = replacement.replace(/\r\n?/g, '\n');
@@ -140,10 +299,26 @@ export class EditorBuffer {
       this.anchor = null;
       return;
     }
-    this.remember();
+    if (record) this.remember();
     const delta = replacement.length - (to - from);
     for (const [key, offset] of this.bookmarks) {
-      this.bookmarks.set(key, offset < from ? offset : offset > to ? offset + delta : from);
+      const tab = this.bookmarkTabs.get(key) ?? 0;
+      if (
+        tab &&
+        offset === from &&
+        to === from + 1 &&
+        this.text[from] === '\t' &&
+        /^ *$/.test(replacement)
+      ) {
+        this.bookmarks.set(key, from + Math.min(tab, replacement.length));
+        this.bookmarkTabs.delete(key);
+      } else {
+        this.bookmarks.set(
+          key,
+          offset < from ? offset : offset >= to && offset !== from ? offset + delta : from,
+        );
+        if (offset >= from && offset < to) this.bookmarkTabs.delete(key);
+      }
     }
     this.text = this.text.slice(0, from) + replacement + this.text.slice(to);
     this.cursor = from + replacement.length;
@@ -151,22 +326,107 @@ export class EditorBuffer {
     this.clearBlock();
     this.modified = this.text !== this.savedText;
     this.preferredColumn = null;
+    this.editedLine = this.position.line;
   }
 
   replaceSelection(text: string): void {
-    const { from, to } = this.selection;
-    this.replaceRange(from, to, text);
+    const { from, to } = this.selectionPoints;
+    this.replacePoints(from, to, text);
+  }
+
+  private replacePoints(from: TextPoint, to: TextPoint, text: string, record = true): void {
+    const fromLine = this.text.slice(0, from.offset).split('\n').length - 1;
+    const marks = [...this.bookmarks]
+      .map(([key, offset]) => [key, this.point(offset, this.bookmarkTabs.get(key) ?? 0)] as const)
+      .filter(
+        ([, point]) =>
+          point.tabOffset && (point.offset === from.offset || point.offset === to.offset),
+      );
+    const normalized = text.replace(/\r\n?/g, '\n');
+    const collapsed = comparePoints(from, to) === 0;
+    const prefixLength = from.tabOffset;
+    const caret = from.offset + prefixLength + normalized.length;
+    const restoreMarks = () => {
+      for (const [key, old] of marks) {
+        let point: TextPoint;
+        if (old.offset === from.offset && old.tabOffset <= from.tabOffset)
+          point = { offset: from.offset + old.tabOffset, tabOffset: 0 };
+        else if (collapsed) {
+          const start = this.lineStart(caret);
+          const line = this.text.slice(0, caret).split('\n').length - 1;
+          const column = textColumn(this.text.slice(start, caret), caret - start, this.tabSize);
+          point = this.pointOnLine(line, column + old.tabOffset - from.tabOffset, true);
+        } else if (old.offset === to.offset && old.tabOffset >= to.tabOffset)
+          point = { offset: caret + old.tabOffset - to.tabOffset, tabOffset: 0 };
+        else point = { offset: from.offset + prefixLength, tabOffset: 0 };
+        this.bookmarks.set(key, point.offset);
+        this.bookmarkTabs.set(key, point.tabOffset);
+      }
+    };
+    if (collapsed) {
+      if (!text) return;
+      this.replaceRange(from.offset, from.offset, ' '.repeat(from.tabOffset) + text, record);
+      restoreMarks();
+      this.finishEdit(fromLine);
+      return;
+    }
+    const prefix = ' '.repeat(from.tabOffset);
+    const suffix = to.tabOffset
+      ? ' '.repeat(tabWidthAt(this.text, to.offset, this.tabSize) - to.tabOffset)
+      : '';
+    this.replaceRange(
+      from.offset,
+      to.offset + (to.tabOffset ? 1 : 0),
+      prefix + text + suffix,
+      record,
+    );
+    this.cursor = from.offset + prefix.length + text.replace(/\r\n?/g, '\n').length;
+    restoreMarks();
+    this.finishEdit(fromLine);
   }
 
   insert(text: string): void {
-    const { from, to } = this.selection;
-    if (!this.insertMode && from === to && !text.includes('\n')) {
-      const lineEnd = this.text.indexOf('\n', from);
-      const end = lineEnd < 0 ? this.text.length : lineEnd;
-      this.replaceRange(from, Math.min(end, from + text.length), text);
-    } else {
-      this.replaceRange(from, to, text);
+    if (!this.insertMode && !this.hasSelection && !text.includes('\n')) {
+      const { line, col } = this.visualPosition;
+      let end = col;
+      for (const character of text)
+        end += character === '\t' ? this.tabSize - (end % this.tabSize) : 1;
+      const target = this.pointOnLine(line, end, true);
+      this.replacePoints(this.cursorPoint, target, text);
+    } else this.replaceSelection(text);
+  }
+
+  /** Reconcile native input without losing a caret or selection inside a tab. */
+  applyNativeInput(next: string, selectionEnd: number): void {
+    next = next.replace(/\r\n?/g, '\n');
+    const old = this.text;
+    const range = this.selection;
+    const prefix = old.slice(0, range.from);
+    const suffix = old.slice(range.to);
+    if (
+      next.length >= prefix.length + suffix.length &&
+      next.startsWith(prefix) &&
+      next.endsWith(suffix)
+    ) {
+      const inserted = next.slice(prefix.length, next.length - suffix.length);
+      if (selectionEnd === range.from + inserted.length) {
+        this.insert(inserted);
+        return;
+      }
     }
+    let start = 0;
+    while (start < old.length && start < next.length && old[start] === next[start]) start++;
+    let end = old.length;
+    let nextEnd = next.length;
+    while (end > start && nextEnd > start && old[end - 1] === next[nextEnd - 1]) {
+      end--;
+      nextEnd--;
+    }
+    this.cursor = start;
+    this.anchor = end > start ? end : null;
+    this.insert(next.slice(start, nextEnd));
+    if (selectionEnd !== nextEnd)
+      this.cursor = Math.max(0, Math.min(selectionEnd, this.text.length));
   }
 
   private previousOffset(offset: number): number {
@@ -190,12 +450,13 @@ export class EditorBuffer {
   }
 
   deleteBackward(): void {
-    const { from, to } = this.selection;
-    if (from !== to) this.replaceRange(from, to, '');
-    else if (from > 0) {
+    const { from } = this.selection;
+    if (this.hasSelection) this.replaceSelection('');
+    else if (from > 0 || this.tabOffset > 0) {
       const { line, col } = this.position;
       const lines = this.lines;
-      const before = (lines[line] ?? '').slice(0, col);
+      const sourceBefore = (lines[line] ?? '').slice(0, col);
+      const before = sourceBefore + ' '.repeat(this.tabOffset);
       if (this.backspaceUnindents && before && /^[ \t]+$/.test(before)) {
         const column = this.visualColumn(before);
         let target = 0;
@@ -221,24 +482,70 @@ export class EditorBuffer {
           if (width === target) break;
         }
         let retained = 0;
-        while (retained < prefix.length && before[retained] === prefix[retained]) retained++;
-        this.replaceRange(from - col + retained, from, prefix.slice(retained));
-      } else this.replaceRange(this.previousOffset(from), from, '');
+        while (retained < prefix.length && sourceBefore[retained] === prefix[retained]) retained++;
+        this.replaceRange(
+          from - col + retained,
+          from + (this.tabOffset ? 1 : 0),
+          prefix.slice(retained),
+        );
+      } else if (this.tabOffset) {
+        this.replaceRange(from, from + 1, ' '.repeat(this.tabOffset - 1));
+      } else {
+        const previous = this.previousOffset(from);
+        this.replaceRange(
+          previous,
+          from,
+          this.cursorThroughTabs && this.text[previous] === '\t'
+            ? ' '.repeat(tabWidthAt(this.text, previous, this.tabSize) - 1)
+            : '',
+        );
+      }
     }
   }
 
   deleteForward(): void {
     const { from, to } = this.selection;
-    if (from !== to) this.replaceRange(from, to, '');
+    if (this.hasSelection) this.replaceSelection('');
+    else if (this.tabOffset) this.replaceRange(from, from + 1, ' '.repeat(this.tabOffset));
     else if (to < this.text.length) this.replaceRange(to, this.nextOffset(to), '');
   }
 
   moveTo(offset: number, select = false): void {
-    if (select && this.anchor === null) this.anchor = this.cursor;
+    this.movePoint(this.point(offset), select);
+  }
+
+  private movePoint(point: TextPoint, select = false): void {
+    if (select && this.anchor === null) {
+      this.anchor = this.cursor;
+      this.anchorTab = this.tabOffset;
+    }
     if (!select) this.anchor = null;
     this.previousPosition = this.cursor;
-    this.cursor = Math.max(0, Math.min(offset, this.text.length));
+    this.previousTab = this.tabOffset;
+    if (this.text.slice(0, point.offset).split('\n').length - 1 !== this.position.line) {
+      if (this.optimalFill && this.editedLine !== null)
+        point = this.compactLine(this.editedLine, true)(point);
+      this.editedLine = null;
+    }
+    point = this.point(point.offset, point.tabOffset);
+    this.cursor = point.offset;
+    this.cursorTab = point.tabOffset;
     this.preferredColumn = null;
+  }
+
+  private pointOnLine(
+    line: number,
+    column: number,
+    throughTabs = this.cursorThroughTabs,
+  ): TextPoint {
+    const lines = this.lines;
+    line = Math.max(0, Math.min(line, lines.length - 1));
+    const point = pointAtColumn(lines[line] ?? '', column, this.tabSize, throughTabs);
+    return { offset: this.offsetAt(line) + point.offset, tabOffset: point.tabOffset };
+  }
+
+  gotoVisual(line: number, column: number, select = false): void {
+    this.movePoint(this.pointOnLine(line, column), select);
   }
 
   offsetAt(line: number, col = 0): number {
@@ -255,21 +562,42 @@ export class EditorBuffer {
 
   move(dx: number, dy: number, select = false): void {
     if (dy) {
-      const { line, col } = this.position;
+      const { line, col } = this.visualPosition;
       const desired = this.preferredColumn ?? col;
-      this.goto(line + dy, desired, select);
+      this.gotoVisual(line + dy, desired, select);
       this.preferredColumn = desired;
       return;
     }
-    if (!select && this.anchor !== null && this.anchor !== this.cursor) {
-      const selection = this.selection;
-      this.moveTo(dx < 0 ? selection.from : selection.to);
+    if (!select && this.anchor !== null && this.hasSelection) {
+      const selection = this.selectionPoints;
+      this.movePoint(dx < 0 ? selection.from : selection.to);
       return;
     }
-    let offset = this.cursor;
-    for (let i = 0; i < Math.abs(dx); i++)
-      offset = dx < 0 ? this.previousOffset(offset) : this.nextOffset(offset);
-    this.moveTo(offset, select);
+    let point = this.cursorPoint;
+    for (let i = 0; i < Math.abs(dx); i++) {
+      if (dx < 0) {
+        if (point.tabOffset)
+          point = { ...point, tabOffset: this.cursorThroughTabs ? point.tabOffset - 1 : 0 };
+        else {
+          if (point.offset === 0) continue;
+          const previous = this.previousOffset(point.offset);
+          point = {
+            offset: previous,
+            tabOffset:
+              this.cursorThroughTabs && this.text[previous] === '\t'
+                ? tabWidthAt(this.text, previous, this.tabSize) - 1
+                : 0,
+          };
+        }
+      } else if (
+        this.cursorThroughTabs &&
+        this.text[point.offset] === '\t' &&
+        point.tabOffset + 1 < tabWidthAt(this.text, point.offset, this.tabSize)
+      ) {
+        point = { ...point, tabOffset: point.tabOffset + 1 };
+      } else point = { offset: this.nextOffset(point.offset), tabOffset: 0 };
+    }
+    this.movePoint(point, select);
   }
 
   moveWord(direction: number, select = false): void {
@@ -301,7 +629,7 @@ export class EditorBuffer {
 
   selectAll(): void {
     this.anchor = 0;
-    this.cursor = this.text.length;
+    this.movePoint(this.point(this.text.length), true);
     this.clearBlock();
   }
 
@@ -336,38 +664,91 @@ export class EditorBuffer {
     if (found < 0) return null;
     this.clearBlock();
     this.anchor = found;
-    this.previousPosition = this.cursor;
-    this.cursor = found + query.length;
-    return { from: found, to: this.cursor };
+    this.movePoint(this.point(found + query.length), true);
+    return this.selection;
   }
 
   replace(query: string, replacement: string, all = false, caseSensitive = false): number {
     if (!query) return 0;
     if (!all) {
-      const selection = this.selection;
-      const value = this.text.slice(selection.from, selection.to);
+      const value = this.selectedText;
       const matches = new RegExp(`^${escapePattern(query)}$`, caseSensitive ? '' : 'i').test(value);
       if (!matches && !this.find(query, { caseSensitive })) return 0;
       this.replaceSelection(replacement);
       return 1;
     }
-    let count = 0;
-    const result = this.text.replace(
+    const original = this.text;
+    const offsets: number[] = [];
+    replacement = replacement.replace(/\r\n?/g, '\n');
+    const result = original.replace(
       new RegExp(escapePattern(query), caseSensitive ? 'g' : 'gi'),
-      () => {
-        count++;
+      (_match, offset: number) => {
+        offsets.push(offset);
         return replacement;
       },
     );
-    if (count) this.replaceRange(0, this.text.length, result);
-    return count;
+    if (!offsets.length) return 0;
+    if (result === original) {
+      this.end(false, true);
+      this.clearBlock();
+      return offsets.length;
+    }
+    const map = (point: TextPoint): TextPoint => {
+      let shift = 0;
+      for (const offset of offsets) {
+        if (point.offset < offset) break;
+        if (point.offset < offset + query.length) return { offset: offset + shift, tabOffset: 0 };
+        shift += replacement.length - query.length;
+      }
+      return { ...point, offset: point.offset + shift };
+    };
+    const bookmarks = [...this.bookmarks].map(
+      ([key, offset]) => [key, map(this.point(offset, this.bookmarkTabs.get(key) ?? 0))] as const,
+    );
+    const previous = map(this.point(this.previousPosition, this.previousTab));
+    const pending =
+      this.editedLine === null ? null : map(this.point(this.offsetAt(this.editedLine)));
+    const changed = new Set<number>();
+    const added = replacement.split('\n').length - 1;
+    const removed = query.split('\n').length - 1;
+    let line = 0,
+      scan = 0,
+      lineShift = 0;
+    for (const offset of offsets) {
+      line += original.slice(scan, offset).split('\n').length - 1;
+      scan = offset;
+      for (let row = line + lineShift; row <= line + lineShift + added; row++) changed.add(row);
+      lineShift += added - removed;
+    }
+    this.remember();
+    this.text = result;
+    this.cursor = result.length;
+    this.anchor = null;
+    this.clearBlock();
+    this.previousPosition = previous.offset;
+    this.previousTab = previous.tabOffset;
+    for (const [key, point] of bookmarks) {
+      this.bookmarks.set(key, point.offset);
+      this.bookmarkTabs.set(key, point.tabOffset);
+    }
+    if (pending) changed.add(this.text.slice(0, pending.offset).split('\n').length - 1);
+    const last = this.position.line;
+    if (this.optimalFill)
+      for (const row of [...changed].sort((a, b) => a - b))
+        if (row < last) this.compactLine(row, false);
+    this.editedLine = changed.has(last) ? last : null;
+    this.modified = this.text !== this.savedText;
+    this.preferredColumn = null;
+    return offsets.length;
   }
 
   private indent(unindent = false): void {
     const selection = this.selection;
     const previousCursor = this.cursor;
     if (selection.from === selection.to && !unindent) {
-      const before = (this.lines[this.position.line] ?? '').slice(0, this.position.col);
+      const before =
+        (this.lines[this.position.line] ?? '').slice(0, this.position.col) +
+        ' '.repeat(this.tabOffset);
       this.insert(
         this.useTabCharacter
           ? '\t'
@@ -392,11 +773,12 @@ export class EditorBuffer {
     this.replaceRange(from, to, replacement);
     if (selection.from !== selection.to) this.anchor = from;
     else this.cursor = Math.max(from, previousCursor + replacement.length - (to - from));
+    this.finishEdit(this.text.slice(0, from).split('\n').length - 1);
   }
 
   private newline(): void {
     const line = this.lines[this.position.line] ?? '';
-    const before = line.slice(0, this.position.col);
+    const before = line.slice(0, this.position.col) + ' '.repeat(this.tabOffset);
     let indentation = this.autoIndent ? (before.match(/^\s*/)?.[0] ?? '') : '';
     if (this.autoIndent && before.trimEnd().endsWith(':')) indentation += ' '.repeat(this.tabSize);
     this.insert(`\n${indentation}`);
@@ -446,17 +828,20 @@ export class EditorBuffer {
     const { from, to } = this.selection;
     if (/^\d$/.test(key)) {
       this.bookmarks.set(Number(key), this.cursor);
+      this.bookmarkTabs.set(Number(key), this.tabOffset);
       return;
     }
     switch (key) {
       case 'b':
         this.blockStart = this.cursor;
+        this.blockStartTab = 0;
         this.blockEnd = null;
         this.anchor = null;
         this.blockVisible = true;
         break;
       case 'k':
         this.blockEnd = this.cursor;
+        this.blockEndTab = 0;
         this.anchor = null;
         this.blockVisible = true;
         break;
@@ -492,20 +877,20 @@ export class EditorBuffer {
         const value = this.text.slice(from, to);
         this.clearBlock();
         this.anchor = null;
-        this.replaceRange(this.cursor, this.cursor, value);
+        this.replacePoints(this.cursorPoint, this.cursorPoint, value);
         break;
       }
       case 'v': {
         if (from === to || (this.cursor >= from && this.cursor <= to)) break;
         const value = this.text.slice(from, to);
-        const target = this.cursor > to ? this.cursor - (to - from) : this.cursor;
+        const target = {
+          offset: this.cursor > to ? this.cursor - (to - from) : this.cursor,
+          tabOffset: this.tabOffset,
+        };
         this.remember();
-        const cut = this.text.slice(0, from) + this.text.slice(to);
-        this.text = cut.slice(0, target) + value + cut.slice(target);
-        this.cursor = target + value.length;
-        this.anchor = null;
-        this.clearBlock();
-        this.modified = this.text !== this.savedText;
+        this.replaceRange(from, to, '', false);
+        const point = this.point(target.offset, target.tabOffset);
+        this.replacePoints(point, point, value, false);
         break;
       }
       case 's':
@@ -529,7 +914,8 @@ export class EditorBuffer {
   private quickCommand(key: string, viewportRows: number): void {
     if (/^\d$/.test(key)) {
       const bookmark = this.bookmarks.get(Number(key));
-      if (bookmark !== undefined) this.moveTo(bookmark);
+      if (bookmark !== undefined)
+        this.movePoint(this.point(bookmark, this.bookmarkTabs.get(Number(key)) ?? 0));
       return;
     }
     switch (key) {
@@ -555,19 +941,20 @@ export class EditorBuffer {
         this.end(false, true);
         break;
       case 'e':
-        this.goto(this.scrollY, this.position.col);
+        this.gotoVisual(this.scrollY, this.visualPosition.col);
         break;
       case 'x':
-        this.goto(this.scrollY + viewportRows - 1, this.position.col);
+        this.gotoVisual(this.scrollY + viewportRows - 1, this.visualPosition.col);
         break;
       case 'p':
-        this.moveTo(this.previousPosition);
+        this.movePoint(this.point(this.previousPosition, this.previousTab));
         break;
       case 'b':
-        if (this.blockStart !== null) this.moveTo(this.blockStart);
+        if (this.blockStart !== null)
+          this.movePoint(this.point(this.blockStart, this.blockStartTab));
         break;
       case 'k':
-        if (this.blockEnd !== null) this.moveTo(this.blockEnd);
+        if (this.blockEnd !== null) this.movePoint(this.point(this.blockEnd, this.blockEndTab));
         break;
       case '[':
       case ']':
@@ -591,7 +978,13 @@ export class EditorBuffer {
       if (prefix === 'k') this.blockCommand(lower);
       if (prefix === 'q') this.quickCommand(lower, visibleRows);
       if (prefix === 'o') {
-        const option = { i: 'autoIndent', t: 'useTabCharacter', u: 'backspaceUnindents' } as const;
+        const option = {
+          i: 'autoIndent',
+          t: 'useTabCharacter',
+          u: 'backspaceUnindents',
+          r: 'cursorThroughTabs',
+          f: 'optimalFill',
+        } as const;
         const property = option[lower as keyof typeof option];
         if (property) {
           this[property] = !this[property];
@@ -631,10 +1024,10 @@ export class EditorBuffer {
           this.moveWord(1, event.shiftKey);
           return true;
         case 'Home':
-          this.goto(this.scrollY, this.position.col, event.shiftKey);
+          this.gotoVisual(this.scrollY, this.visualPosition.col, event.shiftKey);
           return true;
         case 'End':
-          this.goto(this.scrollY + visibleRows - 1, this.position.col, event.shiftKey);
+          this.gotoVisual(this.scrollY + visibleRows - 1, this.visualPosition.col, event.shiftKey);
           return true;
         case 'PageUp':
           this.home(event.shiftKey, true);
