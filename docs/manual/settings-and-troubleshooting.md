@@ -96,7 +96,9 @@ another run until you have captured the result: a new run clears it.
 3. If the black User Screen shows completed output, press Enter to edit source.
    If a program is asking for input, type its answer there instead.
 4. Try the corresponding menu item or touch button. Some browser/OS shortcuts
-   never reach a page. DOS mode may help where Keyboard Lock is supported.
+   never reach a page. Check whether a browser extension has assigned the same
+   shortcut; use the menu or change the extension's assignment. DOS mode may
+   help where Keyboard Lock is supported.
 5. If typing still fails, report the browser/OS, exact key, active screen, and
    whether a fresh page shows the same behavior. Save your source first.
 

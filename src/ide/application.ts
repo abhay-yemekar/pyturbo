@@ -37,7 +37,7 @@ import {
 } from './color-dialog';
 import { COLOR_GROUPS, COLOR_NAMES, colorAttribute, windowColorGroup } from './colors';
 import { acknowledgesOutput, isSystemKey } from './keyboard';
-import { hotkey, type MenuItem, menus, plain } from './menus';
+import { hotkey, type MenuItem, menuCaption, menus, plain } from './menus';
 import { activateAppUpdate, observeAppUpdates } from './updates';
 
 type WindowKind = 'editor' | 'messages' | 'watch' | 'output' | 'help' | 'project' | 'notes';
@@ -1182,8 +1182,10 @@ export class Application {
     this.menuIndex = (index + menus.length) % menus.length;
     const menu = menus[this.menuIndex];
     const width = Math.max(
-      ...menu.items.map((item) => plain(item.label).length + (item.shortcut?.length ?? 0) + 7),
-      20,
+      ...menu.items.map(
+        (item) => plain(menuCaption(item.label)).length + (item.shortcut?.length ?? 0) + 7,
+      ),
+      menu.minWidth ?? 20,
     );
     this.menuStack = [
       {
@@ -1225,7 +1227,7 @@ export class Application {
       this.hotText(
         menu.x + 3,
         y,
-        item.label,
+        menuCaption(item.label),
         attr,
         item.disabled
           ? attr
@@ -1246,7 +1248,9 @@ export class Application {
     if (item.children) {
       const width = Math.max(
         22,
-        ...item.children.map((item) => plain(item.label).length + (item.shortcut?.length ?? 0) + 7),
+        ...item.children.map(
+          (item) => plain(menuCaption(item.label)).length + (item.shortcut?.length ?? 0) + 7,
+        ),
       );
       this.menuStack.push({
         top: menu.top,

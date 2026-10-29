@@ -1,5 +1,13 @@
+import { readFileSync } from 'node:fs';
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Page, test } from '@playwright/test';
+
+const periodGlyph: number[] = JSON.parse(
+  readFileSync(
+    new URL('../../public/fonts/Px437_IBM_VGA_9x16.atlas.json', import.meta.url),
+    'utf8',
+  ),
+).glyphs[46];
 
 test('preserves isolation headers on conditional cached asset responses', async ({ request }) => {
   const asset = await request.get('/icons/icon.svg');
@@ -426,4 +434,87 @@ test('navigates Colors groups, long item lists and grids by keyboard and pointer
   await page.keyboard.press('Alt+c');
   await expect(dialog).not.toBeAttached();
   await expect(page.getByTestId('editor')).toBeFocused();
+});
+
+test('matches the measured Run Compile and Debug menu border cells', async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 800, height: 500 });
+  await shellReady(page);
+  const source = await page.getByTestId('editor').inputValue();
+  const canvas = page.locator('canvas').first();
+  for (const menu of [
+    { key: 'r', from: 24, to: 50 },
+    { key: 'c', from: 29, to: 54 },
+    { key: 'd', from: 38, to: 70 },
+  ]) {
+    await page.keyboard.press(`Alt+${menu.key}`);
+    await expect
+      .poll(() =>
+        canvas.evaluate((element: HTMLCanvasElement) => {
+          const context = element.getContext('2d');
+          if (!context) throw new Error('Canvas is unavailable');
+          const columns: number[] = [];
+          for (let column = 0; column < 80; column++) {
+            const pixels = context.getImageData(column * 9, 16, 9, 16).data;
+            for (let pixel = 0; pixel < pixels.length; pixel += 4) {
+              if (pixels[pixel] === 0 && pixels[pixel + 1] === 0 && pixels[pixel + 2] === 0) {
+                columns.push(column);
+                break;
+              }
+            }
+          }
+          return columns;
+        }),
+      )
+      .toEqual(Array.from({ length: menu.to - menu.from + 1 }, (_, index) => menu.from + index));
+    await canvas.screenshot({ path: testInfo.outputPath(`pyturbo-${menu.key}-menu-720x400.png`) });
+    await page.keyboard.press('Escape');
+  }
+  await expect(page.getByTestId('editor')).toHaveValue(source);
+});
+
+test('renders three VGA periods in menu captions and uses the measured right margin', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 800, height: 500 });
+  await shellReady(page);
+  const source = await page.getByTestId('editor').inputValue();
+  const canvas = page.locator('canvas').first();
+  await page.keyboard.press('Alt+r');
+  for (const column of [35, 36, 37]) {
+    await expect
+      .poll(() =>
+        canvas.evaluate((element: HTMLCanvasElement, column) => {
+          const context = element.getContext('2d');
+          if (!context) throw new Error('Canvas is unavailable');
+          const pixels = context.getImageData(column * 9, 7 * 16, 9, 16).data;
+          return Array.from({ length: 16 }, (_, row) => {
+            let mask = 0;
+            for (let x = 0; x < 9; x++) {
+              const pixel = (row * 9 + x) * 4;
+              if (pixels[pixel] === 0 && pixels[pixel + 1] === 0 && pixels[pixel + 2] === 0)
+                mask |= 1 << x;
+            }
+            return mask;
+          });
+        }, column),
+      )
+      .toEqual(periodGlyph);
+  }
+  await canvas.hover({ position: { x: 49.5 * 9, y: 7.5 * 16 } });
+  await expect
+    .poll(() =>
+      canvas.evaluate((element: HTMLCanvasElement) => {
+        const context = element.getContext('2d');
+        if (!context) throw new Error('Canvas is unavailable');
+        return Array.from(context.getImageData(49 * 9 + 4, 7 * 16 + 8, 1, 1).data).slice(0, 3);
+      }),
+    )
+    .toEqual([0, 170, 0]);
+  await canvas.click({ position: { x: 49.5 * 9, y: 7.5 * 16 } });
+  await expect(page.getByRole('dialog', { name: 'Arguments', exact: true })).toBeAttached();
+  await page.keyboard.press('Escape');
+  await expect(page.getByTestId('editor')).toHaveValue(source);
+  await page.keyboard.press('Alt+r');
+  await page.keyboard.press('a');
+  await expect(page.getByRole('dialog', { name: 'Arguments', exact: true })).toBeAttached();
 });
