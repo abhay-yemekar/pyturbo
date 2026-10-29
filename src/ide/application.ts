@@ -4,7 +4,14 @@ import {
   type PythonTokenRole,
   pythonTokenRoles,
 } from '../editor/highlighter';
-import { CanvasRenderer, CellBuffer, type Rect, VGA_PALETTE } from '../engine';
+import {
+  CanvasRenderer,
+  CellBuffer,
+  type CursorStyle,
+  type Rect,
+  type TextCursor,
+  VGA_PALETTE,
+} from '../engine';
 import {
   type DebugOptions,
   PythonRuntime,
@@ -34,6 +41,12 @@ import { hotkey, type MenuItem, menus, plain } from './menus';
 import { activateAppUpdate, observeAppUpdates } from './updates';
 
 type WindowKind = 'editor' | 'messages' | 'watch' | 'output' | 'help' | 'project' | 'notes';
+const CURSOR_OPTIONS: Record<CursorStyle, string> = {
+  underline: 'Underline (_)',
+  bar: 'Vertical bar (|)',
+  ibeam: 'I-beam (I)',
+  block: 'Block (█)',
+};
 interface IdeWindow {
   id: number;
   kind: WindowKind;
@@ -744,7 +757,7 @@ export class Application {
   private draw(): void {
     this.syncUpdateNotice();
     const b = this.buffer;
-    let cursor: { x: number; y: number; block: boolean } | undefined;
+    let cursor: TextCursor | undefined;
     if (this.quit) {
       b.fill(0, 0, b.cols, b.rows, ' ', 0x07);
       b.text(0, 0, 'C:\\PYTURBO>exit', 0x07);
@@ -768,7 +781,7 @@ export class Application {
         b.text(0, y, Array.from(line.text).slice(0, b.cols).join(''), line.attr);
       });
       if (this.cursorOn && (this.inputWaiting || this.shell))
-        cursor = { x: inputX, y: Math.max(0, visible.length - 1), block: false };
+        cursor = { x: inputX, y: Math.max(0, visible.length - 1), style: 'underline' };
       if (pauseHint) {
         const attr = this.attr('status', 0x70);
         b.fill(0, b.rows - 1, b.cols, 1, ' ', attr);
@@ -826,7 +839,7 @@ export class Application {
         cursor = {
           x: r.x + 1 + visualCol - editor.scrollX,
           y: r.y + 1 + p.line - editor.scrollY,
-          block: !editor.insertMode,
+          style: editor.insertMode ? this.settings.cursorStyle : 'block',
         };
         if (
           cursor.x <= r.x ||
@@ -2718,16 +2731,27 @@ export class Application {
           value: String(this.settings.cuaKeys),
           type: 'checkbox',
         },
+        {
+          label: 'Cursor style',
+          value: CURSOR_OPTIONS[this.settings.cursorStyle],
+          type: 'select',
+          options: Object.values(CURSOR_OPTIONS),
+        },
       ],
-      async ([tab, indent, useTab, unindent, cua]) => {
+      async ([tab, indent, useTab, unindent, cua, cursor]) => {
         const size = Number(tab);
         if (!Number.isInteger(size) || size < 1 || size > 16)
           throw new Error('Tab size must be between 1 and 16.');
+        const style = (Object.keys(CURSOR_OPTIONS) as CursorStyle[]).find(
+          (key) => CURSOR_OPTIONS[key] === cursor,
+        );
+        if (!style) throw new Error('Choose a supported cursor style.');
         this.settings.tabSize = size;
         this.settings.autoIndent = indent === 'true';
         this.settings.useTabCharacter = useTab === 'true';
         this.settings.backspaceUnindents = unindent === 'true';
         this.settings.cuaKeys = cua === 'true';
+        this.settings.cursorStyle = style;
         this.applyEditorOptions();
         await this.saveSettings();
       },

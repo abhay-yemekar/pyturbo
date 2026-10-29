@@ -27,13 +27,22 @@ OK saves the draft; Cancel or Escape discards it.
 
 Open **Options → Environment → Editor…**.
 
-| Setting             | Factory behavior                                               |
-| ------------------- | -------------------------------------------------------------- |
-| Tab size            | Four columns; accepts values from 1 through 16                 |
-| Auto indent         | On; carries indentation to a new line                          |
-| Use tab character   | Off; Tab inserts spaces by default                             |
-| Backspace unindents | On; in leading whitespace, return toward a smaller indentation |
-| CUA keys            | On; enable familiar Ctrl+A/C/X/V/Z actions                     |
+| Setting             | Factory behavior                                                               |
+| ------------------- | ------------------------------------------------------------------------------ |
+| Tab size            | Four columns; accepts values from 1 through 16                                 |
+| Auto indent         | On; carries indentation to a new line                                          |
+| Use tab character   | Off; Tab inserts spaces by default                                             |
+| Backspace unindents | On; in leading whitespace, return toward a smaller indentation                 |
+| CUA keys            | On; enable familiar Ctrl+A/C/X/V/Z actions                                     |
+| Cursor style        | Underline (`_`); also offers Vertical bar (`\|`), I-beam (`I`) and Block (`█`) |
+
+The cursor style changes the insertion caret in every editor window and is saved
+in this browser workspace. Overwrite mode still uses a block cursor; **Insert**
+switches back to insertion mode and your chosen style. Program input and the
+Python shell retain their underline cursor. Cancel or Escape discards a draft
+choice in the Editor dialog.
+
+![Selecting I-beam in PyTurbo's Editor preferences](../images/manual-cursor-style.png)
 
 Ctrl+O, I/T/U toggles the corresponding indentation options. The changes apply
 to open/new editors and persist in the current workspace. Optimal Fill and

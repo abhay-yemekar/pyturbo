@@ -1,4 +1,5 @@
 import { createStore, del, entries, get, set, setMany } from 'idb-keyval';
+import type { CursorStyle } from '../engine/renderer/canvas-renderer';
 
 export interface WorkspaceFile {
   name: string;
@@ -16,6 +17,7 @@ export interface WorkspaceSettings {
   pauseAfterRun: boolean;
   videoMode: VideoMode;
   tabSize: number;
+  cursorStyle: CursorStyle;
   autoIndent: boolean;
   useTabCharacter: boolean;
   backspaceUnindents: boolean;
@@ -34,6 +36,7 @@ export const defaultSettings: WorkspaceSettings = {
   pauseAfterRun: false,
   videoMode: 'color',
   tabSize: 4,
+  cursorStyle: 'underline',
   autoIndent: true,
   useTabCharacter: false,
   backspaceUnindents: true,
@@ -90,6 +93,13 @@ export function normalizeSettings(value: unknown): WorkspaceSettings {
   if (saved.rows === 25 || saved.rows === 43 || saved.rows === 50) output.rows = saved.rows;
   if (saved.identifierColor === 'green' || saved.identifierColor === 'yellow')
     output.identifierColor = saved.identifierColor;
+  if (
+    saved.cursorStyle === 'underline' ||
+    saved.cursorStyle === 'bar' ||
+    saved.cursorStyle === 'ibeam' ||
+    saved.cursorStyle === 'block'
+  )
+    output.cursorStyle = saved.cursorStyle;
   if (saved.videoMode && ['color', 'lcd', 'monochrome', 'high-contrast'].includes(saved.videoMode))
     output.videoMode = saved.videoMode;
   for (const key of [

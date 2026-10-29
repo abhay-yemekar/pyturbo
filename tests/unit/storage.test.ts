@@ -39,9 +39,15 @@ describe('workspace storage', () => {
       { name: 'main.py', content: 'import util', updatedAt: 1 },
       { name: 'lib/util.py', content: 'x=1', updatedAt: 2 },
     ]);
-    await store.saveSettings({ ...defaultSettings, rows: 50, pauseAfterRun: true });
+    await store.saveSettings({
+      ...defaultSettings,
+      rows: 50,
+      pauseAfterRun: true,
+      cursorStyle: 'bar',
+    });
     expect((await store.loadFiles()).map((file) => file.name)).toEqual(['lib/util.py', 'main.py']);
     expect((await store.loadSettings()).pauseAfterRun).toBe(true);
+    expect((await store.loadSettings()).cursorStyle).toBe('bar');
     await store.deleteFile('main.py');
     expect(await store.loadFile('main.py')).toBeUndefined();
     expect(await store.loadFiles()).toHaveLength(1);
@@ -75,6 +81,7 @@ describe('workspace storage', () => {
     const settings = normalizeSettings({
       rows: 99,
       tabSize: -1,
+      cursorStyle: 'unknown',
       useTabCharacter: 'yes',
       backspaceUnindents: null,
       screenMode: 'bad',
@@ -84,12 +91,14 @@ describe('workspace storage', () => {
     });
     expect(settings.rows).toBe(25);
     expect(settings.tabSize).toBe(4);
+    expect(settings.cursorStyle).toBe('underline');
     expect(settings.useTabCharacter).toBe(false);
     expect(settings.backspaceUnindents).toBe(true);
     expect(settings.pauseAfterRun).toBe(false);
     expect(settings.colors).toEqual({ normal: 0x1e });
     settings.arguments.push('hello');
     expect(normalizeSettings(undefined).arguments).toEqual([]);
+    expect(normalizeSettings({ rows: 43 }).cursorStyle).toBe('underline');
   });
 });
 
