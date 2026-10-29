@@ -605,37 +605,44 @@ test('keeps page overlap and viewport shortcuts aligned after resizing, includin
   expect(await cursorPosition(editor)).toEqual({ line: 12, col: 0 });
 });
 
-for (const layout of [
-  { name: '43 lines', rows: '43', mode: 'exact', visibleRows: 39 },
-  { name: '50 lines', rows: '50', mode: 'exact', visibleRows: 46 },
-  { name: 'Fill', rows: '25', mode: 'fill', visibleRows: 46 },
-]) {
-  test(`uses the zoomed viewport for paging and selections in ${layout.name}`, async ({ page }) => {
-    await page.setViewportSize({ width: 1080, height: 800 });
-    const editor = await open(page);
-    await editor.fill(Array(140).fill('abcdef').join('\n'));
-    await command(page, 'Preferences…');
-    const preferences = page.getByRole('dialog', { name: 'Preferences', exact: true });
-    await preferences
-      .getByRole('combobox', { name: 'Lines', exact: true })
-      .selectOption(layout.rows);
-    await preferences
-      .getByRole('combobox', { name: 'Screen fit', exact: true })
-      .selectOption(layout.mode);
-    await preferences.getByRole('button', { name: 'OK', exact: true }).press('Enter');
-    await editor.press('F5');
-    await editor.press('Control+PageUp');
-    await editor.press('Shift+PageDown');
-    expect(await cursorPosition(editor)).toEqual({ line: layout.visibleRows - 1, col: 0 });
-    expect(await editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(0);
-    await editor.press('Control+Home');
-    expect(await cursorPosition(editor)).toEqual({ line: layout.visibleRows - 1, col: 0 });
-    await editor.press('Control+End');
-    expect(await cursorPosition(editor)).toEqual({ line: (layout.visibleRows - 1) * 2, col: 0 });
-    await editor.press('Control+PageDown');
-    expect(await cursorPosition(editor)).toEqual({ line: 139, col: 6 });
-  });
-}
+test.describe('zoomed viewport navigation', () => {
+  // Update notices have their own controlled layout checks in updates.spec.ts.
+  // A newly discovered worker must not change this fixed-size paging fixture.
+  test.use({ serviceWorkers: 'block' });
+  for (const layout of [
+    { name: '43 lines', rows: '43', mode: 'exact', visibleRows: 39 },
+    { name: '50 lines', rows: '50', mode: 'exact', visibleRows: 46 },
+    { name: 'Fill', rows: '25', mode: 'fill', visibleRows: 46 },
+  ]) {
+    test(`uses the zoomed viewport for paging and selections in ${layout.name}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1080, height: 800 });
+      const editor = await open(page);
+      await editor.fill(Array(140).fill('abcdef').join('\n'));
+      await command(page, 'Preferences…');
+      const preferences = page.getByRole('dialog', { name: 'Preferences', exact: true });
+      await preferences
+        .getByRole('combobox', { name: 'Lines', exact: true })
+        .selectOption(layout.rows);
+      await preferences
+        .getByRole('combobox', { name: 'Screen fit', exact: true })
+        .selectOption(layout.mode);
+      await preferences.getByRole('button', { name: 'OK', exact: true }).press('Enter');
+      await editor.press('F5');
+      await editor.press('Control+PageUp');
+      await editor.press('Shift+PageDown');
+      expect(await cursorPosition(editor)).toEqual({ line: layout.visibleRows - 1, col: 0 });
+      expect(await editor.evaluate((input: HTMLTextAreaElement) => input.selectionStart)).toBe(0);
+      await editor.press('Control+Home');
+      expect(await cursorPosition(editor)).toEqual({ line: layout.visibleRows - 1, col: 0 });
+      await editor.press('Control+End');
+      expect(await cursorPosition(editor)).toEqual({ line: (layout.visibleRows - 1) * 2, col: 0 });
+      await editor.press('Control+PageDown');
+      expect(await cursorPosition(editor)).toEqual({ line: 139, col: 6 });
+    });
+  }
+});
 
 test('preserves manual WordStar scrolling and follows an offscreen Find result', async ({
   page,

@@ -27,14 +27,16 @@ OK saves the draft; Cancel or Escape discards it.
 
 Open **Options → Environment → Editor…**.
 
-| Setting             | Factory behavior                                                               |
-| ------------------- | ------------------------------------------------------------------------------ |
-| Tab size            | Four columns; accepts values from 1 through 16                                 |
-| Auto indent         | On; carries indentation to a new line                                          |
-| Use tab character   | Off; Tab inserts spaces by default                                             |
-| Backspace unindents | On; in leading whitespace, return toward a smaller indentation                 |
-| CUA keys            | On; enable familiar Ctrl+A/C/X/V/Z actions                                     |
-| Cursor style        | Underline (`_`); also offers Vertical bar (`\|`), I-beam (`I`) and Block (`█`) |
+| Setting             | Factory behavior                                                                   |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| Tab size            | Four columns; accepts values from 1 through 16                                     |
+| Auto indent         | On; carries indentation to a new line                                              |
+| Use tab character   | Off; Tab inserts spaces by default                                                 |
+| Backspace unindents | On; in leading whitespace, return toward a smaller indentation                     |
+| CUA keys            | On; enable familiar Ctrl+A/C/X/V/Z actions                                         |
+| Cursor style        | Underline (`_`); also offers Vertical bar (`\|`), I-beam (`I`) and Block (`█`)     |
+| Cursor through tabs | On; arrows can stop inside a hard tab without changing the file                    |
+| Optimal fill        | Off; when enabled, compact edited leading whitespace into tabs on leaving the line |
 
 The cursor style changes the insertion caret in every editor window and is saved
 in this browser workspace. Overwrite mode still uses a block cursor; **Insert**
@@ -42,12 +44,21 @@ switches back to insertion mode and your chosen style. Program input and the
 Python shell retain their underline cursor. Cancel or Escape discards a draft
 choice in the Editor dialog.
 
-![Selecting I-beam in PyTurbo's Editor preferences](../images/manual-cursor-style.png)
+![PyTurbo's Editor preferences with cursor and tab options](../images/manual-cursor-style.png)
 
-Ctrl+O, I/T/U toggles the corresponding indentation options. The changes apply
-to open/new editors and persist in the current workspace. Optimal Fill and
-Cursor Through Tabs remain pending; they are not options to enable in this
-edition.
+Ctrl+O, **I/T/U/F/R** toggles Auto indent, Use tab character, Backspace unindents,
+Optimal fill and Cursor through tabs respectively. These preferences apply to
+open/new editors and persist in the current workspace.
+
+With Cursor through tabs off, movement jumps across a tab. Switching it off
+while the caret is inside a tab keeps that position until the next movement.
+Moving through tabs never inserts spaces or changes saved source.
+
+Optimal fill compacts the leading whitespace of an edited line when you leave
+it. Completed lines in a paste are compacted too; the current line stays editable.
+It does not rewrite untouched imported lines or spaces between words. It can
+create hard tabs even with Use tab character off. Keep Optimal fill off to retain
+space-only indentation. The change is undoable.
 
 ## DOS mode and phones
 

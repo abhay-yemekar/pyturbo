@@ -159,8 +159,13 @@ implemented Ctrl+O T/U meanings: true-tab insertion and leading-whitespace remov
 to a preceding smaller indentation. A 7-column indent returns to a prior 3-column
 indent; with Unindents off, Backspace removes one character. These options and
 Ctrl+O I use the dialog's shared persistent settings, as observed across newly
-created reference editors. Optimal Fill and cursor-inside-tab editing still need
-implementation; their presence in the original dialog is not a completion claim.
+created reference editors. Issue #33 adds Optimal Fill and cursor-inside-tab
+editing. Private probes establish tab-cell navigation, vertical snapping with
+Through Tabs off, insertion with a retained hard-tab remainder, Backspace/Delete,
+newline handling and source-anchored legacy block boundaries. The implementation
+and tests record those observations independently; they do not certify complete
+editor fidelity. CUA partial selections, clipboard representation and native IME
+retain the verification limits in [editor-and-storage.md](editor-and-storage.md).
 
 ## Reference comparison still required
 
