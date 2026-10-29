@@ -279,12 +279,22 @@ for (const manualScroll of [false, true]) {
     );
     await page.evaluate(() => window.updateHarness.publish());
     await expect(notice(page)).toBeVisible();
+    // System fonts can give the update notice a different height on Linux.
+    // Derive the text-body capacity from that measured CSS height, then check
+    // both the native grid and the cursor independently against it.
+    const rows = await notice(page).evaluate((region: HTMLElement) =>
+      Math.floor((window.innerHeight - region.offsetHeight - 10) / 16),
+    );
+    const visibleRows = rows - 4;
+    expect(visibleRows).toBeLessThan(46);
+    await expect(page.locator('canvas').first()).toHaveAttribute('height', String(rows * 16));
     await expect(input).toBeFocused();
     await input.press('Control+Home');
-    await expect(input).toHaveAttribute('aria-description', 'Line 4, column 1');
+    const topLine = manualScroll ? 3 : 46 - visibleRows;
+    await expect(input).toHaveAttribute('aria-description', `Line ${topLine + 1}, column 1`);
     await input.press('Control+PageUp');
     await input.press('Shift+PageDown');
-    await expect(input).toHaveAttribute('aria-description', 'Line 43, column 1');
+    await expect(input).toHaveAttribute('aria-description', `Line ${visibleRows}, column 1`);
     expect(await input.evaluate((element: HTMLTextAreaElement) => element.selectionStart)).toBe(0);
   });
 }
