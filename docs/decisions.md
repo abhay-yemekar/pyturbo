@@ -44,6 +44,9 @@ the same run retain that run's output.
 The owner also approved an explicit Update available → Save and reload action.
 It must save the workspace, wait for active work, and preserve source on save or
 activation failure; discovering an update alone must not reload the page.
+On 29 October the owner requested additional cursor shapes, including a vertical
+or I-shaped caret. The optional Editor preference retains underline as the
+factory default and the block cursor as the overwrite-mode indicator.
 
 ## Available dependency pins
 

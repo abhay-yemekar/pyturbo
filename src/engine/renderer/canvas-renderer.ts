@@ -2,10 +2,12 @@ import type { CellBuffer } from '../cell-buffer';
 import { VGA_PALETTE } from '../palette';
 import { CELL_HEIGHT, CELL_WIDTH, GlyphAtlas, type VgaAtlasData } from './glyph-atlas';
 
+export type CursorStyle = 'underline' | 'bar' | 'ibeam' | 'block';
+
 export interface TextCursor {
   x: number;
   y: number;
-  block: boolean;
+  style: CursorStyle;
 }
 
 export class CanvasRenderer {
@@ -93,7 +95,17 @@ export class CanvasRenderer {
     const data = this.image.data;
     for (let pixel = 0; pixel < mask.length; pixel++) {
       let ink = mask[pixel] === 1;
-      if (cursor && (cursor.block || pixel >= CELL_WIDTH * (CELL_HEIGHT - 2))) ink = !ink;
+      if (cursor) {
+        const x = pixel % CELL_WIDTH;
+        const y = Math.floor(pixel / CELL_WIDTH);
+        const cap = y < 2 || y >= CELL_HEIGHT - 2;
+        const cursorInk =
+          cursor.style === 'block' ||
+          (cursor.style === 'underline' && y >= CELL_HEIGHT - 2) ||
+          (cursor.style === 'bar' && x < 2) ||
+          (cursor.style === 'ibeam' && (cap ? x < 4 : x === 1 || x === 2));
+        if (cursorInk) ink = !ink;
+      }
       const colour = ink ? foreground : background;
       data[pixel * 4] = colour[0] ?? 0;
       data[pixel * 4 + 1] = colour[1] ?? 0;
