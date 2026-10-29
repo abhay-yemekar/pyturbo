@@ -34,8 +34,8 @@ does not certify overall visual fidelity or complete Phase 0.
   editing, focus navigation and Turbo dialog interaction require integration.
 - The generic application/editor tables remain transcribed from the plan.
   IDE-specific defaults are now separately recorded in `src/ide/colors.ts`,
-  following direct reference observation below. Selected-disabled menu color
-  still requires a dedicated reference check.
+  following direct reference observation below. The selected-disabled factory
+  color is now observed separately; customized behavior remains open in #45.
 - COOP/COEP headers are configured in Vite development/preview and Pages
   `_headers`. The Pages preview response headers, CDN loading, live input,
   Stop and debugger checks pass; evidence is in `implementation-status.md`.
@@ -137,6 +137,35 @@ reference caption cells, File's pointer boundary, color preferences and native
 720×400/2×/3× scaling. PR #28 then passed all 132 browser cases and other
 required checks. Five production UI checks also passed after its deployment.
 
+## Pull-down comparison, 29 October 2026
+
+Private native captures establish the following zero-based top-border cells in
+the original 80×25 grid. These are independent geometry facts, despite the
+different 8×16 and approved 9×16 fonts.
+
+| Menu    | Border columns | Width including the two outer blank columns |
+| ------- | -------------- | ------------------------------------------- |
+| Run     | 24–50          | 29 cells                                    |
+| Compile | 29–54          | 28 cells                                    |
+| Debug   | 38–70          | 35 cells                                    |
+
+The local #46 correction uses those minimum widths, retaining dynamic expansion
+for longer captions. Menu ellipses render as three CP437 period cells. Accessible
+command names retain their existing labels. The File-menu implementation
+snapshot changes only five caption rows; its attribute rows are unchanged.
+Native-canvas tests check all three border spans, the three period bitmaps, and
+pointer/keyboard activation at the corrected Run menu's right margin. The owner
+gave the go-ahead; PR CI and deployment verification remain pending.
+
+![PyTurbo's corrected Run menu using three VGA period cells](images/menu-run.png)
+
+The same original captures show disabled entries as `78` when unselected and
+`08` when selected, rather than the generic Turbo Vision `28`. Current PyTurbo
+still derives `28`; #45 tracks this separately. Customizing the original menu
+colors remains unverified: later fresh sessions failed before the play control
+appeared, with a Lexical initialization error recorded locally. No color rule is
+guessed from that failure, and no original images or emulator assets are shipped.
+
 ## Editor viewport navigation
 
 Private original-IDE captures verify a one-row overlap: Page Down moves 13
@@ -150,8 +179,8 @@ The first fast capture dropped input and is excluded from this evidence.
 The editor uses the host's current body height for these commands, including
 resized and zoomed windows, 43/50-line and Fill layouts. Page selections and
 preferred columns through shorter lines are covered separately. This establishes
-these commands' semantics, not physical browser/OS shortcut capture or the four
-remaining Ctrl+O F/R implementations. PR #30 passed all 144 browser cases, the
+these commands' semantics, not physical browser/OS shortcut capture. The later
+Ctrl+O F/R work is recorded below. PR #30 passed all 144 browser cases, the
 other required checks and its preview. All five production navigation cases pass.
 
 Private Editor Options captures and a separate Backspace probe confirm the

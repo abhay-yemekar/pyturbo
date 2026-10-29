@@ -9,6 +9,7 @@ export interface MenuItem {
 export interface Menu {
   label: string;
   x: number;
+  minWidth?: number;
   items: MenuItem[];
 }
 const item = (
@@ -87,6 +88,7 @@ export const menus: Menu[] = [
   {
     label: '~R~un',
     x: 23,
+    minWidth: 29,
     items: [
       item('~R~un', 'run', 'Ctrl+F9', 'Make and run the current program'),
       item('~P~rogram reset', 'reset', 'Ctrl+F2'),
@@ -99,6 +101,7 @@ export const menus: Menu[] = [
   {
     label: '~C~ompile',
     x: 28,
+    minWidth: 28,
     items: [
       item('~C~ompile', 'compile', 'Alt+F9'),
       item('~M~ake', 'make', 'F9'),
@@ -112,6 +115,7 @@ export const menus: Menu[] = [
   {
     label: '~D~ebug',
     x: 37,
+    minWidth: 35,
     items: [
       item('~I~nspect…', 'inspect', 'Alt+F4'),
       item('~E~valuate/modify…', 'evaluate', 'Ctrl+F4'),
@@ -213,6 +217,10 @@ export const menus: Menu[] = [
 
 export function plain(label: string): string {
   return label.replaceAll('~', '');
+}
+/** The original VGA menu uses three period cells rather than a Unicode ellipsis. */
+export function menuCaption(label: string): string {
+  return label.replaceAll('…', '...');
 }
 export function hotkey(label: string): string {
   return /~(.)~/.exec(label)?.[1]?.toLowerCase() ?? '';

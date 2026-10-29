@@ -11,19 +11,20 @@ The agreed stack and scope remain in place. Implementation has crossed phase
 boundaries to address the owner's reported bugs, requested manual and approved
 update action. No phase is certified complete while its exit checks remain open.
 
-| Plan phase                     | Delivered or implemented                                                                                                                            | Still open                                                                                   |
-| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| 0 — Foundations                | Personal GitHub repository, CI/security settings, private task board, Pages production/previews, VGA renderer and browser Python                    | Original-IDE visual baselines and real browser/OS shortcut matrix                            |
-| 1 — Turbo shell and Run        | Menus, windows, editor, compile/run/input/Stop, messages, browser file storage and sharing; accepted typing/output/save fixes                       | Complete visual and real-device verification                                                 |
-| 2 — Feature parity             | Window management, search, packages/plots, Colors/preferences, Help, arguments and persistent editor options; owner-tested F/R implementation (#33) | F/R PR/CI/deployment and remaining parity verification                                       |
-| 3 — Debugger and nostalgia     | Trace/step/breakpoints, watches/evaluate/stack, multi-file projects and conio/graphics/turtle bridges                                               | Complete debugger/graphics interaction and compatibility checks                              |
-| 4 — Polish, mobile and offline | Base offline runtime, DOS/touch controls, illustrated public manual, deployed safe updates (#41) and cursor choices (#43)                           | Mobile/real-device checks, accessibility and performance budgets                             |
-| 5 — Launch                     | Release automation and an unpublished draft 0.1.0 proposal                                                                                          | Final release gates, branding/launch assets and explicit publication decision; no v1 release |
+| Plan phase                     | Delivered or implemented                                                                                                                 | Still open                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 0 — Foundations                | Personal GitHub repository, CI/security settings, private task board, Pages production/previews, VGA renderer and browser Python         | Original-IDE visual baselines and real browser/OS shortcut matrix                            |
+| 1 — Turbo shell and Run        | Menus, windows, editor, compile/run/input/Stop, messages, browser file storage and sharing; accepted typing/output/save fixes            | Complete visual and real-device verification                                                 |
+| 2 — Feature parity             | Window management, search, packages/plots, Colors/preferences, Help, arguments and persistent editor options; deployed F/R options (#44) | Remaining parity verification                                                                |
+| 3 — Debugger and nostalgia     | Trace/step/breakpoints, watches/evaluate/stack, multi-file projects and conio/graphics/turtle bridges                                    | Complete debugger/graphics interaction and compatibility checks                              |
+| 4 — Polish, mobile and offline | Base offline runtime, DOS/touch controls, illustrated public manual, deployed safe updates (#41) and cursor choices (#43)                | Mobile/real-device checks, accessibility and performance budgets                             |
+| 5 — Launch                     | Release automation and an unpublished draft 0.1.0 proposal                                                                               | Final release gates, branding/launch assets and explicit publication decision; no v1 release |
 
-Safe updates and the cursor-style/manual additions passed owner testing, PR CI
-and deployed checks. Current work is **Optimal Fill and Cursor Through Tabs
-(#33)**. The owner accepted local testing on 29 October; PR CI and deployment
-verification remain pending. The original
+Safe updates, cursor styles and the F/R editor options passed owner testing,
+PR CI and deployed checks. Current local work is the measured **pull-down menu
+geometry and VGA punctuation correction (#46)**. The owner gave the go-ahead;
+PR CI and deployment verification remain pending. Selected-disabled color customization is tracked
+separately in #45. The original
 plan is preserved as a dated reference; [decisions.md](decisions.md) records
 approved changes such as Enter-only output return and clearing each new run.
 
@@ -49,7 +50,7 @@ commands may use simplified interactions rather than complete Turbo parity.
 ## Verification record
 
 - Whole-project lint and strict TypeScript checks pass.
-- All **88 unit tests** pass on the local #33 revision, including reference palettes,
+- All **88 unit tests** pass on the current local revision, including reference palettes,
   editor/storage behavior and system-shortcut handling. Coverage is measured
   separately for the configured scope; it does not cover the entire IDE.
 - The production build and PWA generation pass. Production preview applies the
@@ -194,7 +195,7 @@ CodeQL and Pages passed before merge `d2fa83e`. Four preview and four production
 Chromium scenarios pass for cursor rendering/modes/persistence, the manual link
 and real Python input. Both features are deployed on the public site.
 
-The local #33 source now implements F/R preferences and shortcuts with the
+Issue #33 implements F/R preferences and shortcuts with the
 approved defaults. Virtual tab positions preserve source during navigation and
 support visual selection, clipboard/IME input, pointer placement, scrolling,
 undo and bookmarks. Optimal Fill packs edited leading whitespace on line change,
@@ -210,9 +211,25 @@ scrolling. They also reproduced a hidden bottom-row caret after the notice
 appeared. Resizing now keeps a previously visible caret onscreen while preserving
 a view deliberately scrolled away from it. All **54 final affected browser
 checks** pass across Chromium, Firefox and Playwright WebKit. Lint, typecheck,
-88 unit tests, production build and 71 manual links/anchors pass. The expanded
-261-case suite has not been rerun as a whole. The owner accepted the local changes;
-the final PR CI result must be recorded before merge.
+88 unit tests, production build and 71 manual links/anchors pass. The owner
+accepted the local changes. PR #44 then passed all **261 browser CI cases** on
+`0f8b622`, all other required checks, CodeQL and Pages, and merged as `0147837`.
+Twelve Chromium cases pass on both its exact preview and production, including
+F/R editing/settings, clipboard, virtual scrolling, cursor styles, the manual,
+real Python input/output and update-notice layout. Production serves
+`index-CZ6KJF4s.js` with COOP/COEP; the illustrated manual is present on GitHub.
+The original local folder was safely fast-forwarded after clean-main verification.
+The first CI run's six layout assertions assumed a Windows notice height; the
+final checks measure available height and pass with Linux system fonts too.
+
+Local #46 corrects the three measured menu widths and renders menu ellipses as
+three VGA period cells. Both new Chromium cases reproduced the old differences
+before the source correction. The File-menu snapshot changes only five caption
+rows, with no attribute changes. All **69 affected shell/window browser checks**
+pass across Chromium, Firefox and Playwright WebKit, alongside lint, strict
+typecheck, 88 unit tests, build and manual links. The owner gave the go-ahead;
+the final 267-case PR CI remains open. No whole-product or full original-IDE fidelity claim
+follows from these focused comparisons.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
@@ -224,7 +241,7 @@ repository-level Actions permission needed for release PR creation; it is enable
 while default workflow token permissions remain read-only.
 The first automated release proposal incorrectly selected `1.0.0`. PR #11 fixed
 the initial version to `0.1.0`; PR #15 fixed generated-file lint and human-triggered
-PR checks. The updated proposal at `68b4ad3` passes all five required jobs, CodeQL and Pages
+PR checks. The updated proposal at `c6b8a84` passes all five required jobs, CodeQL and Pages
 and remains an unpublished draft. No v1 release has been published.
 
 Record final command results in the PR validation record or update this file.
@@ -239,8 +256,8 @@ Successful builds and small geometry fixtures do not certify the whole product.
    modes. Commit only PyTurbo screenshots/baselines.
 4. Complete real browser/OS shortcut tests, Safari/iOS and Android checks. The
    owner approved continuing implementation while these checks remain open.
-5. Complete PR CI and deployment of the owner-tested Ctrl+O F/R options in
-   [editor-and-storage.md](editor-and-storage.md).
+5. Complete PR CI and deployment of the local #46 menu correction;
+   verify customized selected-disabled colors for #45 without guessing a rule.
 6. Verify save failures/conflicts, IME, directional selections, clipboard,
    imported/shared projects, repeated modules, output floods and stop while
    waiting for input or debugger commands.
