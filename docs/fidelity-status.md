@@ -5,6 +5,9 @@ captures now establish color attributes, the Colors group/item order and its
 cell geometry. A complete pixel comparison is still pending. Passing unit tests
 does not certify overall visual fidelity or complete Phase 0.
 
+The [Phase 0 checklist](phase-zero-status.md) maps verified evidence and remaining
+work to each foundation task and exit criterion. **Phase 0 is not complete.**
+
 ## Verified at the engine milestone
 
 - `CellBuffer` stores Unicode glyphs and VGA attribute bytes in an explicit cell
@@ -149,13 +152,15 @@ different 8×16 and approved 9×16 fonts.
 | Compile | 29–54          | 28 cells                                    |
 | Debug   | 38–70          | 35 cells                                    |
 
-The local #46 correction uses those minimum widths, retaining dynamic expansion
+PR #47 (issue #46) uses those minimum widths, retaining dynamic expansion
 for longer captions. Menu ellipses render as three CP437 period cells. Accessible
 command names retain their existing labels. The File-menu implementation
 snapshot changes only five caption rows; its attribute rows are unchanged.
 Native-canvas tests check all three border spans, the three period bitmaps, and
-pointer/keyboard activation at the corrected Run menu's right margin. The owner
-gave the go-ahead; PR CI and deployment verification remain pending.
+pointer/keyboard activation at the corrected Run menu's right margin. After the
+owner's go-ahead, all 267 browser CI cases and other required checks passed.
+Nine Chromium smoke cases passed on the exact preview and again on production
+after merge `60da202`. This correction is deployed.
 
 ![PyTurbo's corrected Run menu using three VGA period cells](images/menu-run.png)
 
@@ -214,20 +219,23 @@ transcribed from the original IDE.
 
 ## Keyboard capture matrix
 
-The matrix is pending actual browser/OS testing. Calling `preventDefault()` in
+The matrix remains incomplete. Partial native Chrome/Windows observations are
+recorded in the [Phase 0 checklist](phase-zero-status.md#native-chrome-spot-checks-29-october-2026);
+the installed browser version and remaining keys still need verification.
+Calling `preventDefault()` in
 the application does not establish that a browser or OS reserved key was
 captured. Playwright WebKit also does not establish behaviour on real Safari or
 iOS. Menus and visible controls must remain usable for unavailable shortcuts.
 The owner approved continuing implementation with these real-device gates open.
 
-| Key group                                  | Chrome/Windows                   | Edge/Windows                     | Firefox/Windows       | Safari/macOS          | Safari/iOS                    |
-| ------------------------------------------ | -------------------------------- | -------------------------------- | --------------------- | --------------------- | ----------------------------- |
-| F1/F3/F5/F6/F10/F11                        | Pending                          | Pending                          | Pending               | Pending               | No physical F-keys by default |
-| Alt+letter menus, Alt+F1/F3/F4/F5/F7/F8/F9 | Pending                          | Pending                          | Pending               | Pending               | Pending hardware keyboard     |
-| Ctrl+F1–F9, Ctrl+W/T/N/Tab                 | Pending                          | Pending                          | Pending               | Pending               | Pending hardware keyboard     |
-| Ctrl+K/Q WordStar sequences                | Pending                          | Pending                          | Pending               | Pending               | Pending hardware keyboard     |
-| Clipboard and IME                          | Pending                          | Pending                          | Pending               | Pending               | Pending                       |
-| Fullscreen Keyboard Lock                   | Pending support/permission check | Pending support/permission check | Pending support check | Pending support check | Pending support check         |
+| Key group                                  | Chrome/Windows                               | Edge/Windows                     | Firefox/Windows       | Safari/macOS          | Safari/iOS                    |
+| ------------------------------------------ | -------------------------------------------- | -------------------------------- | --------------------- | --------------------- | ----------------------------- |
+| F1/F3/F5/F6/F10/F11                        | First five observed; F11 pending             | Pending                          | Pending               | Pending               | No physical F-keys by default |
+| Alt+letter menus, Alt+F1/F3/F4/F5/F7/F8/F9 | Alt+R observed; Alt+C conflict; rest pending | Pending                          | Pending               | Pending               | Pending hardware keyboard     |
+| Ctrl+F1–F9, Ctrl+W/T/N/Tab                 | Ctrl+T opened browser tab; rest pending      | Pending                          | Pending               | Pending               | Pending hardware keyboard     |
+| Ctrl+K/Q WordStar sequences                | Pending                                      | Pending                          | Pending               | Pending               | Pending hardware keyboard     |
+| Clipboard and IME                          | Pending                                      | Pending                          | Pending               | Pending               | Pending                       |
+| Fullscreen Keyboard Lock                   | Pending support/permission check             | Pending support/permission check | Pending support check | Pending support check | Pending support check         |
 
 Real Android Chrome, phone landscape layout, touch controls, screen readers,
 performance budgets and offline runtime/package behaviour remain separate
