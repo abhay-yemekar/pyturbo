@@ -26,7 +26,8 @@ Safe updates, cursor styles, the F/R editor options and the measured **pull-down
 menu geometry and VGA punctuation correction (#46, PR #47)** passed owner review,
 PR CI and deployed checks. Current work closes the remaining Phase 0 visual and
 native-browser verification gaps. Selected-disabled color customization is
-measured in #45; its owner-tested local correction awaits PR CI and delivery. The original
+delivered in #45 / PR #50. Current verification adds an independently measured
+ready-editor status row while broader desktop and native shortcuts remain open. The original
 plan is preserved as a dated reference; [decisions.md](decisions.md) records
 approved changes such as Enter-only output return and clearing each new run.
 
@@ -239,7 +240,7 @@ safely fast-forwarded to that merge. Native Chrome spot checks are documented in
 the [Phase 0 checklist](phase-zero-status.md#native-chrome-spot-checks-29-october-2026).
 No whole-product or full original-IDE fidelity claim follows from these checks.
 
-Local #45 follows controlled original-IDE Color-mode measurements: selected
+PR #50 closes #45 with controlled original-IDE Color-mode measurements: selected
 disabled entries retain `08`, independently of customized Selection Bar and
 Disabled Entry roles. Three new reference-driven unit cases reproduced the old
 differences before the correction. Lint, strict typecheck, all 91 unit tests,
@@ -247,8 +248,20 @@ configured coverage and the production build pass. The new browser scenario
 passes in Chromium, Firefox and Playwright WebKit, checking default/custom roles,
 disabled activation and preserved source. All 51 affected shell cases pass across
 those engines, and all 90 local documentation links/anchors pass. The owner
-confirmed the local highlight and disabled Enter behavior. Full PR CI and
-deployment remain open; this correction is not yet on the public site.
+confirmed the local highlight and disabled Enter behavior. All 270 browser CI
+cases, the other required checks, CodeQL and Pages passed on `36fe018`.
+Ten Chromium checks passed on the exact preview and again on production after
+merge `8f6f3e0`. Production serves `index-Fe3WSatA.js` with COOP/COEP. The public
+manual includes the explanation and original PyTurbo screenshot; the clean
+original folder was safely fast-forwarded to the merge.
+
+The normal ready-editor status row now has independently measured text/attribute
+facts and a pixel regression using PyTurbo's approved licensed atlas. All three
+focused browser cases pass locally, including menu-hint restoration and source
+preservation. The PR validation record tracks the expanded 273-case CI suite and
+deployed checks. This is verification
+work with no application behavior or asset change; it does not close the full
+desktop, other status contexts or native shortcut gates.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
@@ -278,8 +291,7 @@ Successful builds and small geometry fixtures do not certify the whole product.
    modes. Commit only PyTurbo screenshots/baselines.
 4. Complete real browser/OS shortcut tests, Safari/iOS and Android checks. The
    owner approved continuing implementation while these checks remain open.
-5. Finish PR CI and delivery of the owner-tested #45 correction;
-   complete the remaining [Phase 0 checks](phase-zero-status.md).
+5. Complete the remaining visual and native shortcut [Phase 0 checks](phase-zero-status.md).
 6. Verify save failures/conflicts, IME, directional selections, clipboard,
    imported/shared projects, repeated modules, output floods and stop while
    waiting for input or debugger commands.

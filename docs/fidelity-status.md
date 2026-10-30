@@ -178,13 +178,37 @@ and Program reset remained `08` in every case. Lossless native-canvas pixel
 histograms independently confirm the gray-on-black result; it is not a formula
 derived from either editable role.
 
-Local #45 now uses `08` for selected disabled entries while retaining the separate
+PR #50 (issue #45) uses `08` for selected disabled entries while retaining the separate
 custom roles for enabled selections and unselected disabled entries. The generic
 Turbo Vision table remains unchanged. The new reference-driven unit cases first
 failed on the prior source. The owner confirmed the local highlight and disabled
-Enter behavior; final PR CI and deployment remain open. The measurements cover
+Enter behavior. All 270 browser CI cases and other required checks passed;
+10 Chromium checks passed on the exact preview and again on production after
+merge `8f6f3e0`. The correction and illustrated manual are deployed. The measurements cover
 Color mode only; original monochrome behavior is
 not certified. No original images or emulator assets are shipped.
+
+## Ready editor status row, 30 October 2026
+
+The original new-editor and zoomed-editor captures establish the normal status
+row at row 24. Key glyphs begin at zero-based columns 1 (F1), 10 (F2), 19 (F3),
+28 (Alt-F9), 44 (F9) and 53 (F10). Their foreground is red `4`; Help, Save, Open,
+Compile, Make and Menu captions use black `0`; the background is light gray `7`.
+Blank-cell foreground follows the independently observed Status Line Normal Text
+palette. Only these facts are committed in `status-line.cells.json`.
+
+The new browser case compares all pixels of PyTurbo's row to those independent
+cell facts rendered with the approved licensed 9×16 atlas. It checks the ready
+editor, a changed menu hint, restoration after Escape and preserved source.
+It passes in Chromium, Firefox and Playwright WebKit; CI and deployment evidence
+is recorded in the PR validation record. This verifies the normal row within the chosen font; it does
+not certify literal equality to the original 8×16 bitmap, menu/debugger hints,
+other screen modes or the whole desktop.
+
+The reference's newly opened editor had a shorter height before F5; its initial
+configuration has not been independently established. That single state is not
+treated as a factory default. Its zoomed frame
+spans rows 1–23; initial-window geometry needs separate configuration evidence.
 
 ## Editor viewport navigation
 

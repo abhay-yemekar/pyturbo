@@ -1,0 +1,20 @@
+{
+  "source": "https://turboc.pages.dev",
+  "evidence": "Original Turbo C++ 3.0 zoomed new-editor native canvas, 30 October 2026. Independent 8x16 cell pixel probes confirm occupied glyph columns and red/black foreground on light-gray background; blank foreground follows the independently observed Status Line Normal Text palette.",
+  "columns": 80,
+  "row": 24,
+  "text": " F1 Help  F2 Save  F3 Open  Alt-F9 Compile  F9 Make  F10 Menu                   ",
+  "attributes": [
+    112, 116, 116, 112, 112, 112, 112, 112, 112, 112, 116, 116, 112, 112, 112, 112, 112, 112, 112,
+    116, 116, 112, 112, 112, 112, 112, 112, 112, 116, 116, 116, 116, 116, 116, 112, 112, 112, 112,
+    112, 112, 112, 112, 112, 112, 116, 116, 112, 112, 112, 112, 112, 112, 112, 116, 116, 116, 112,
+    112, 112, 112, 112, 112, 112, 112, 112, 112, 112, 112, 112, 112, 112, 112, 112, 112, 112, 112,
+    112, 112, 112, 112
+  ],
+  "rgb": {
+    "0": [0, 0, 0],
+    "4": [170, 0, 0],
+    "7": [170, 170, 170]
+  },
+  "scope": "Ready editor in Color mode at 80x25. Cell text/attributes only; approved 9x16 font differs from reference 8x16. Menu/dialog/debugger hints, full desktop and other modes remain separate checks."
+}
