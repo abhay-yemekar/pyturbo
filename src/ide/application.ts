@@ -1218,7 +1218,7 @@ export class Application {
       const selected = index === menu.selected;
       const attr = item.disabled
         ? selected
-          ? (selectedAttr & 0xf0) | (this.attr('pulldownDisabledEntry', 0x78) & 15)
+          ? 0x08 // Original IDE retains this attribute even with custom menu colors.
           : this.attr('pulldownDisabledEntry', 0x78)
         : selected
           ? selectedAttr

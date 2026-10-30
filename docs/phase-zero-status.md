@@ -11,7 +11,7 @@ Implemented features from later phases do not close these verification gates.
 | Licensed 9×16 atlas, canvas renderer, integer scaling and reference comparison | Partial  | Native 720×400 and integer 2×/3× rendering are tested. Original menu-bar cells and three pull-down widths were measured independently. Complete desktop/menu/status-line reference baselines remain open.                                                                                         |
 | Worker Python, shared-buffer input and interrupts on a preview                 | Verified | Deployed runtime checks exercised real Python print/input, infinite-loop recovery and Stop during input/debugger waits. Full CI continues to cover these paths. The nine latest production smoke cases include real input and fresh output; they do not independently repeat every Stop scenario. |
 | Native shortcut matrix in four browsers and fullscreen Keyboard Lock           | Partial  | Windows Chrome spot checks are recorded below. Remaining Chrome keys, Edge, Firefox, Safari and native fullscreen/Keyboard Lock checks remain open.                                                                                                                                               |
-| Final palette tables and golden-screen format                                  | Partial  | Palette tables, all 20 observed Colors groups and text/attribute fixture format exist. Customized selected-disabled menu behavior in #45 and complete original-screen baselines remain unverified.                                                                                                |
+| Final palette tables and golden-screen format                                  | Partial  | Palette tables, all 20 observed Colors groups and text/attribute fixture format exist. Color-mode selected-disabled customization was measured for #45; its owner-tested correction awaits PR CI and delivery. Complete original-screen baselines remain open.                                    |
 
 The plan's exit criteria have two parts:
 
@@ -70,10 +70,12 @@ implementation while real-device gates stay explicitly open.
 
 ## Work needed to close Phase 0
 
-1. Verify the original custom Selection Bar/Disabled Entry interaction for
-   [#45](https://github.com/abhay-yemekar/pyturbo/issues/45), then implement and
-   test the measured rule. Factory selected-disabled `08` is observed; a custom
-   color rule has not been inferred from it.
+1. Finish PR CI and delivery of the owner-tested correction for
+   [#45](https://github.com/abhay-yemekar/pyturbo/issues/45). Private controlled
+   reference measurements now verify that selected-disabled `08` is retained
+   after customizing Selection Bar and Disabled Entry separately. The local
+   correction and reference facts are recorded in the
+   [fidelity record](fidelity-status.md#pull-down-comparison-29-october-2026).
 2. Complete private comparisons of desktop, menu/status rows, menu states and
    native scaling. Commit independently transcribed facts and PyTurbo baselines;
    keep original-IDE images and binaries out of the repository and shipped app.

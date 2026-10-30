@@ -27,3 +27,13 @@ uses the menu palette. This is a text/attribute contract, not an owner-approved
 full-screen bitmap baseline; the reference 8×16 and agreed 9×16 fonts differ.
 Review this reference against the source rather than regenerating it from the
 implementation.
+
+`menu-disabled.colors.json` contains independently measured Color-mode menu
+attributes from the original Turbo C++ 3.0 on 30 October 2026. Selection Bar and
+Disabled Entry were customized separately; enabled Arguments and unselected
+disabled entries confirmed that the changes took effect. Selected disabled Run
+and Program reset retained `08` in all three recorded cases. The private loader
+omitted the broken web text-input wrapper and loaded the unchanged original DOS
+bundle; its SHA-256 is recorded in the fixture. This is a palette-state contract,
+not a full-screen or other-video-mode baseline. Do not regenerate its facts from
+PyTurbo's output.

@@ -1,0 +1,9 @@
+{
+  "source": "Independently measured Turbo C++ 3.0 DOS canvas, 30 October 2026; private unchanged reference bundle SHA-256 9cba3798fd6965eb13f413b4783c07e5f661797f416d89ca3b0d8fe02b1f564c",
+  "scope": "Color mode only; selected disabled Run and Program reset rows; enabled Arguments and unselected disabled rows confirm accepted custom roles. Original images and binaries are not included.",
+  "cases": [
+    { "name": "factory", "selectionBar": 32, "disabledEntry": 120, "selectedDisabled": 8 },
+    { "name": "custom selection", "selectionBar": 81, "disabledEntry": 120, "selectedDisabled": 8 },
+    { "name": "custom disabled", "selectionBar": 32, "disabledEntry": 89, "selectedDisabled": 8 }
+  ]
+}

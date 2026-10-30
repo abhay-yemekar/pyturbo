@@ -1,11 +1,50 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { CellBuffer } from '../../src/engine';
 import { Application } from '../../src/ide/application';
 import { type ColorDialogState, drawColorDialog } from '../../src/ide/color-dialog';
 import { COLOR_GROUPS, colorAttribute } from '../../src/ide/colors';
+import { menus } from '../../src/ide/menus';
 import { defaultSettings } from '../../src/storage/workspace';
 
+const menuReference = JSON.parse(
+  readFileSync(new URL('./fixtures/golden/menu-disabled.colors.json', import.meta.url), 'utf8'),
+) as {
+  cases: Array<{
+    name: string;
+    selectionBar: number;
+    disabledEntry: number;
+    selectedDisabled: number;
+  }>;
+};
+
 describe('reference IDE palettes', () => {
+  it.each(menuReference.cases)(
+    'retains selected-disabled cells for $name menu colors',
+    (reference) => {
+      const buffer = new CellBuffer(80, 25);
+      const shell = Object.assign(Object.create(Application.prototype), {
+        buffer,
+        settings: {
+          ...structuredClone(defaultSettings),
+          colors: {
+            pulldownSelectionBar: reference.selectionBar,
+            pulldownDisabledEntry: reference.disabledEntry,
+          },
+        },
+      });
+      const menu = { x: 28, y: 1, width: 28, items: menus[5].items, selected: 0 };
+      shell.drawMenu(menu);
+      expect(buffer.get(32, 2)?.attr).toBe(reference.selectionBar);
+      expect(buffer.get(31, 4)).toEqual({ ch: 'L', attr: reference.disabledEntry });
+      menu.selected = 2;
+      shell.drawMenu(menu);
+      for (let x = 30; x < 54; x++) expect(buffer.get(x, 4)?.attr).toBe(reference.selectedDisabled);
+      expect(buffer.get(31, 4)?.ch).toBe('L');
+      expect(buffer.get(29, 4)?.attr).toBe(0x70);
+    },
+  );
+
   it('retains all twenty original groups, including the off-screen dialog groups', () => {
     expect(COLOR_GROUPS.map((group) => group.label)).toEqual([
       'Main Menu',

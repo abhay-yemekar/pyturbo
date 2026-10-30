@@ -9,6 +9,20 @@ const periodGlyph: number[] = JSON.parse(
   ),
 ).glyphs[46];
 
+const disabledMenuReference = JSON.parse(
+  readFileSync(
+    new URL('../unit/fixtures/golden/menu-disabled.colors.json', import.meta.url),
+    'utf8',
+  ),
+) as {
+  cases: Array<{
+    name: string;
+    selectionBar: number;
+    disabledEntry: number;
+    selectedDisabled: number;
+  }>;
+};
+
 test('preserves isolation headers on conditional cached asset responses', async ({ request }) => {
   const asset = await request.get('/icons/icon.svg');
   expect(asset.status()).toBe(200);
@@ -434,6 +448,79 @@ test('navigates Colors groups, long item lists and grids by keyboard and pointer
   await page.keyboard.press('Alt+c');
   await expect(dialog).not.toBeAttached();
   await expect(page.getByTestId('editor')).toBeFocused();
+});
+
+test('matches original selected-disabled menu colors independently of custom roles', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 800, height: 500 });
+  await shellReady(page);
+  const editor = page.getByTestId('editor');
+  const source = await editor.inputValue();
+  const canvas = page.getByRole('img', { name: /VGA desktop/ });
+  const cellColors = (column: number, row: number) =>
+    canvas.evaluate(
+      (element: HTMLCanvasElement, [x, y]) => {
+        const context = element.getContext('2d');
+        if (!context) throw new Error('Canvas is unavailable');
+        const pixels = context.getImageData(x * 9, y * 16, 9, 16).data;
+        const colors = new Set<string>();
+        for (let index = 0; index < pixels.length; index += 4)
+          colors.add(`${pixels[index]},${pixels[index + 1]},${pixels[index + 2]}`);
+        return [...colors].sort();
+      },
+      [column, row],
+    );
+  const rgb = (index: number) =>
+    [
+      '0,0,0',
+      '0,0,170',
+      '0,170,0',
+      '0,170,170',
+      '170,0,0',
+      '170,0,170',
+      '170,85,0',
+      '170,170,170',
+      '85,85,85',
+      '85,85,255',
+      '85,255,85',
+      '85,255,255',
+      '255,85,85',
+      '255,85,255',
+      '255,255,85',
+      '255,255,255',
+    ][index];
+  const attributeColors = (attr: number) => [...new Set([rgb(attr & 15), rgb(attr >> 4)])].sort();
+  for (const reference of disabledMenuReference.cases) {
+    if (reference.name !== 'factory') {
+      await page.keyboard.press('Alt+o');
+      await page.keyboard.press('e');
+      await page.keyboard.press('c');
+      const dialog = page.getByRole('dialog', { name: 'Colors', exact: true });
+      await dialog.getByLabel('Group', { exact: true }).selectOption({ label: 'Pulldown Menus' });
+      for (const [label, attr] of [
+        ['Selection Bar', reference.selectionBar],
+        ['Disabled Entry', reference.disabledEntry],
+      ] as const) {
+        await dialog.getByLabel('Item', { exact: true }).selectOption({ label });
+        await dialog.getByLabel('Foreground', { exact: true }).selectOption(String(attr & 15));
+        await dialog.getByLabel('Background', { exact: true }).selectOption(String(attr >> 4));
+      }
+      await dialog.getByRole('button', { name: 'OK', exact: true }).press('Enter');
+      await expect(dialog).not.toBeAttached();
+    }
+    await page.keyboard.press('Alt+c');
+    await expect.poll(() => cellColors(32, 2)).toEqual(attributeColors(reference.selectionBar));
+    await expect.poll(() => cellColors(31, 4)).toEqual(attributeColors(reference.disabledEntry));
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('ArrowDown');
+    await expect.poll(() => cellColors(31, 4)).toEqual(attributeColors(reference.selectedDisabled));
+    await page.keyboard.press('Enter'); // Disabled Link must not activate or dismiss the menu.
+    await expect.poll(() => cellColors(31, 4)).toEqual(attributeColors(reference.selectedDisabled));
+    await canvas.screenshot({ path: testInfo.outputPath(`disabled-menu-${reference.name}.png`) });
+    await page.keyboard.press('Escape');
+    await expect(editor).toHaveValue(source);
+  }
 });
 
 test('matches the measured Run Compile and Debug menu border cells', async ({ page }, testInfo) => {

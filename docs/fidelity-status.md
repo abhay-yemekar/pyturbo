@@ -164,12 +164,27 @@ after merge `60da202`. This correction is deployed.
 
 ![PyTurbo's corrected Run menu using three VGA period cells](images/menu-run.png)
 
-The same original captures show disabled entries as `78` when unselected and
-`08` when selected, rather than the generic Turbo Vision `28`. Current PyTurbo
-still derives `28`; #45 tracks this separately. Customizing the original menu
-colors remains unverified: later fresh sessions failed before the play control
-appeared, with a Lexical initialization error recorded locally. No color rule is
-guessed from that failure, and no original images or emulator assets are shipped.
+The original captures show disabled entries as `78` when unselected and `08`
+when selected, rather than the generic Turbo Vision `28`. Fresh reference
+sessions initially failed in the site's Lexical text-input wrapper. On 30 October,
+a private loader omitted that wrapper and ran the same unmodified DOS bundle;
+the About dialog verified Turbo C++ 3.0, and the bundle hash is recorded in
+`tests/unit/fixtures/golden/menu-disabled.colors.json`.
+
+Controlled Color-mode probes changed Selection Bar from `20` to `51`, then in a
+fresh session changed Disabled Entry from `78` to `59`. Enabled Arguments and
+unselected disabled rows reflected those accepted values. Selected disabled Run
+and Program reset remained `08` in every case. Lossless native-canvas pixel
+histograms independently confirm the gray-on-black result; it is not a formula
+derived from either editable role.
+
+Local #45 now uses `08` for selected disabled entries while retaining the separate
+custom roles for enabled selections and unselected disabled entries. The generic
+Turbo Vision table remains unchanged. The new reference-driven unit cases first
+failed on the prior source. The owner confirmed the local highlight and disabled
+Enter behavior; final PR CI and deployment remain open. The measurements cover
+Color mode only; original monochrome behavior is
+not certified. No original images or emulator assets are shipped.
 
 ## Editor viewport navigation
 
