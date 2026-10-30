@@ -21,6 +21,13 @@ Open **Options → Environment → Preferences…**.
 a Group and Item, choose foreground/background swatches, and inspect the preview.
 OK saves the draft; Cancel or Escape discards it.
 
+In Color mode, highlighting a disabled menu entry uses dark gray on black,
+matching the original IDE. This highlight stays the same when you customize
+Selection Bar or Disabled Entry; enabled selections and unselected disabled
+entries use those respective settings. A disabled command cannot be activated.
+
+![PyTurbo's disabled Link command highlighted in the Compile menu](../images/menu-disabled.png)
+
 ![PyTurbo’s Colors dialog](../images/colors.png)
 
 ## Editor preferences

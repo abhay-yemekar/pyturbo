@@ -26,7 +26,7 @@ Safe updates, cursor styles, the F/R editor options and the measured **pull-down
 menu geometry and VGA punctuation correction (#46, PR #47)** passed owner review,
 PR CI and deployed checks. Current work closes the remaining Phase 0 visual and
 native-browser verification gaps. Selected-disabled color customization is
-tracked separately in #45. The original
+measured in #45; its owner-tested local correction awaits PR CI and delivery. The original
 plan is preserved as a dated reference; [decisions.md](decisions.md) records
 approved changes such as Enter-only output return and clearing each new run.
 
@@ -239,6 +239,17 @@ safely fast-forwarded to that merge. Native Chrome spot checks are documented in
 the [Phase 0 checklist](phase-zero-status.md#native-chrome-spot-checks-29-october-2026).
 No whole-product or full original-IDE fidelity claim follows from these checks.
 
+Local #45 follows controlled original-IDE Color-mode measurements: selected
+disabled entries retain `08`, independently of customized Selection Bar and
+Disabled Entry roles. Three new reference-driven unit cases reproduced the old
+differences before the correction. Lint, strict typecheck, all 91 unit tests,
+configured coverage and the production build pass. The new browser scenario
+passes in Chromium, Firefox and Playwright WebKit, checking default/custom roles,
+disabled activation and preserved source. All 51 affected shell cases pass across
+those engines, and all 90 local documentation links/anchors pass. The owner
+confirmed the local highlight and disabled Enter behavior. Full PR CI and
+deployment remain open; this correction is not yet on the public site.
+
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
 only PyTurbo issues/PRs, and uses this repository as its default. Issue #1 is in
@@ -250,7 +261,7 @@ while default workflow token permissions remain read-only.
 The first automated release proposal incorrectly selected `1.0.0`. PR #11 fixed
 the initial version to `0.1.0`; PR #15 fixed generated-file lint and human-triggered
 PR checks. The updated [release proposal](https://github.com/abhay-yemekar/pyturbo/pull/3)
-at `e6e7471` passes all five required jobs, CodeQL and Pages and remains an
+at `efa267f` passes all five required jobs, CodeQL and Pages and remains an
 unpublished draft. Its exact manifest/changelog diff was reviewed before routine
 workflow approval; no owner action is currently required for those checks.
 Subsequent regenerated revisions need their own checks. No v1 release has been published.
@@ -267,7 +278,7 @@ Successful builds and small geometry fixtures do not certify the whole product.
    modes. Commit only PyTurbo screenshots/baselines.
 4. Complete real browser/OS shortcut tests, Safari/iOS and Android checks. The
    owner approved continuing implementation while these checks remain open.
-5. Verify customized selected-disabled colors for #45 without guessing a rule;
+5. Finish PR CI and delivery of the owner-tested #45 correction;
    complete the remaining [Phase 0 checks](phase-zero-status.md).
 6. Verify save failures/conflicts, IME, directional selections, clipboard,
    imported/shared projects, repeated modules, output floods and stop while
