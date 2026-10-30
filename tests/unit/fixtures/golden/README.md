@@ -37,3 +37,12 @@ omitted the broken web text-input wrapper and loaded the unchanged original DOS
 bundle; its SHA-256 is recorded in the fixture. This is a palette-state contract,
 not a full-screen or other-video-mode baseline. Do not regenerate its facts from
 PyTurbo's output.
+
+`status-line.cells.json` independently records the original ready editor's
+80-column status row at row 24, measured on 30 October 2026. Key glyphs begin at
+columns 1, 10, 19, 28, 44 and 53; black captions and red keys use light-gray
+background. Blank-cell foreground follows the independently observed Status Line
+Normal Text palette. The browser test checks every pixel using these cell facts
+and PyTurbo's agreed licensed 9×16 atlas, then checks restoration after a menu.
+It does not claim the reference's 8×16 font is pixel-identical or certify other
+status contexts, windows or complete screens.

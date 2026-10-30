@@ -11,7 +11,7 @@ Implemented features from later phases do not close these verification gates.
 | Licensed 9×16 atlas, canvas renderer, integer scaling and reference comparison | Partial  | Native 720×400 and integer 2×/3× rendering are tested. Original menu-bar cells and three pull-down widths were measured independently. Complete desktop/menu/status-line reference baselines remain open.                                                                                         |
 | Worker Python, shared-buffer input and interrupts on a preview                 | Verified | Deployed runtime checks exercised real Python print/input, infinite-loop recovery and Stop during input/debugger waits. Full CI continues to cover these paths. The nine latest production smoke cases include real input and fresh output; they do not independently repeat every Stop scenario. |
 | Native shortcut matrix in four browsers and fullscreen Keyboard Lock           | Partial  | Windows Chrome spot checks are recorded below. Remaining Chrome keys, Edge, Firefox, Safari and native fullscreen/Keyboard Lock checks remain open.                                                                                                                                               |
-| Final palette tables and golden-screen format                                  | Partial  | Palette tables, all 20 observed Colors groups and text/attribute fixture format exist. Color-mode selected-disabled customization was measured for #45; its owner-tested correction awaits PR CI and delivery. Complete original-screen baselines remain open.                                    |
+| Final palette tables and golden-screen format                                  | Partial  | Palette tables, all 20 observed Colors groups and text/attribute fixture format exist. The measured Color-mode selected-disabled correction shipped in PR #50. The normal status row has an independent fixture and local browser checks; complete original-screen baselines remain open.         |
 
 The plan's exit criteria have two parts:
 
@@ -21,7 +21,9 @@ The plan's exit criteria have two parts:
   open.** The owner retained the plan's 720×400, 9×16 grid after observing the
   reference emulator's 640×400, 8×16 grid. Those different fonts prevent a claim
   of literal pixel equality. Independent cell/palette measurements and full
-  screen verification are still required within that agreed choice.
+  screen verification are still required within that agreed choice. The menu-bar
+  row and normal ready-editor status row have independent cell facts; complete
+  desktop/window baselines remain open.
 
 ## Latest delivered comparison
 
@@ -37,6 +39,15 @@ The [fidelity record](fidelity-status.md#pull-down-comparison-29-october-2026)
 separates measured original facts from PyTurbo's own implementation snapshots.
 These results establish the tested behavior, not complete original-IDE fidelity
 or certification of physical browser shortcuts.
+
+[PR #50](https://github.com/abhay-yemekar/pyturbo/pull/50) delivered the measured
+selected-disabled Color-mode attributes and illustrated manual after owner
+testing. All 270 browser CI cases and required checks passed; ten exact-preview
+and ten production Chromium smoke cases passed after merge `8f6f3e0`.
+
+The normal ready-editor status row now has a reference fixture and three passing
+browser checks. CI and deployed evidence is recorded in the PR validation record. This does not close the complete
+desktop or native shortcut gates.
 
 ## Native Chrome spot checks, 29 October 2026
 
@@ -70,19 +81,13 @@ implementation while real-device gates stay explicitly open.
 
 ## Work needed to close Phase 0
 
-1. Finish PR CI and delivery of the owner-tested correction for
-   [#45](https://github.com/abhay-yemekar/pyturbo/issues/45). Private controlled
-   reference measurements now verify that selected-disabled `08` is retained
-   after customizing Selection Bar and Disabled Entry separately. The local
-   correction and reference facts are recorded in the
-   [fidelity record](fidelity-status.md#pull-down-comparison-29-october-2026).
-2. Complete private comparisons of desktop, menu/status rows, menu states and
+1. Complete private comparisons of desktop, other menu/status contexts, menu states and
    native scaling. Commit independently transcribed facts and PyTurbo baselines;
    keep original-IDE images and binaries out of the repository and shipped app.
-3. Complete the [native shortcut matrix](fidelity-status.md#keyboard-capture-matrix),
+2. Complete the [native shortcut matrix](fidelity-status.md#keyboard-capture-matrix),
    recording browser/OS versions, focus, conflicts and fullscreen/Keyboard Lock
    support. Keep unavailable-device results open.
-4. Review the evidence against every Phase 0 task and exit criterion before
+3. Review the evidence against every Phase 0 task and exit criterion before
    closing [issue #1](https://github.com/abhay-yemekar/pyturbo/issues/1) or marking
    the phase complete. A live site and green automated checks alone are
    insufficient.

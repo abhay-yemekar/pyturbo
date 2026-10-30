@@ -1,4 +1,21 @@
+import { readFileSync } from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
+
+const statusReference = JSON.parse(
+  readFileSync(new URL('../unit/fixtures/golden/status-line.cells.json', import.meta.url), 'utf8'),
+) as {
+  columns: number;
+  row: number;
+  text: string;
+  attributes: number[];
+  rgb: Record<string, number[]>;
+};
+const statusAtlas = JSON.parse(
+  readFileSync(
+    new URL('../../public/fonts/Px437_IBM_VGA_9x16.atlas.json', import.meta.url),
+    'utf8',
+  ),
+) as { glyphs: number[][] };
 
 async function ready(page: Page): Promise<void> {
   await page.goto('/');
@@ -11,6 +28,56 @@ async function run(page: Page, source: string): Promise<void> {
   await page.getByRole('textbox', { name: 'Python editor', exact: true }).fill(source);
   await page.keyboard.press('Control+F9');
 }
+
+test('matches the independently measured ready-editor status row and restores it after a menu', async ({
+  page,
+}, testInfo) => {
+  await page.setViewportSize({ width: 800, height: 500 });
+  await ready(page);
+  const editor = page.getByTestId('editor');
+  const source = await editor.inputValue();
+  const canvas = page.getByRole('img', { name: /VGA desktop/ });
+  await expect(canvas).toHaveAttribute('width', '720');
+  await expect(canvas).toHaveAttribute('height', '400');
+  expect(statusReference.text).toHaveLength(statusReference.columns);
+  expect(statusReference.attributes).toHaveLength(statusReference.columns);
+  const expectedCells = Array.from(statusReference.text, (character, column) => {
+    const attr = statusReference.attributes[column];
+    return {
+      glyph: statusAtlas.glyphs[character.charCodeAt(0)],
+      foreground: statusReference.rgb[attr & 15],
+      background: statusReference.rgb[attr >> 4],
+    };
+  });
+  const firstMismatch = () =>
+    canvas.evaluate(
+      (element: HTMLCanvasElement, { cells, row }) => {
+        const context = element.getContext('2d');
+        if (!context) throw new Error('Canvas is unavailable');
+        const pixels = context.getImageData(0, row * 16, cells.length * 9, 16).data;
+        for (let column = 0; column < cells.length; column++) {
+          const cell = cells[column];
+          for (let y = 0; y < 16; y++)
+            for (let x = 0; x < 9; x++) {
+              const color = cell.glyph[y] & (1 << x) ? cell.foreground : cell.background;
+              const offset = (y * cells.length * 9 + column * 9 + x) * 4;
+              const actual = Array.from(pixels.slice(offset, offset + 4));
+              if (color.some((byte, index) => byte !== actual[index]) || actual[3] !== 255)
+                return { column, x, y, expected: [...color, 255], actual };
+            }
+        }
+        return null;
+      },
+      { cells: expectedCells, row: statusReference.row },
+    );
+  await expect.poll(firstMismatch).toBeNull();
+  await page.keyboard.press('Alt+r');
+  await expect.poll(firstMismatch).not.toBeNull();
+  await page.keyboard.press('Escape');
+  await expect.poll(firstMismatch).toBeNull();
+  await expect(editor).toHaveValue(source);
+  await canvas.screenshot({ path: testInfo.outputPath('ready-editor-status-row-720x400.png') });
+});
 
 test('runs real Python and returns to the editor after completion', async ({ page }) => {
   await ready(page);
