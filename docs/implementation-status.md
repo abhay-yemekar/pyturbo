@@ -1,9 +1,11 @@
 # Implementation and verification status
 
-Updated on 29 October 2026. Source coverage and
+Updated on 30 October 2026. Source coverage and
 verified behavior are different. This is not a completed v1 launch checklist.
 
-For usage instructions, see [PyTurbo’s Manual](manual/README.md).
+For usage instructions, see [PyTurbo’s Manual](manual/README.md). The
+[Phase 0 checklist](phase-zero-status.md) records each foundation task, its
+evidence and its remaining exit checks. **Phase 0 is not complete.**
 
 ## Position against the roadmap
 
@@ -20,11 +22,11 @@ update action. No phase is certified complete while its exit checks remain open.
 | 4 — Polish, mobile and offline | Base offline runtime, DOS/touch controls, illustrated public manual, deployed safe updates (#41) and cursor choices (#43)                | Mobile/real-device checks, accessibility and performance budgets                             |
 | 5 — Launch                     | Release automation and an unpublished draft 0.1.0 proposal                                                                               | Final release gates, branding/launch assets and explicit publication decision; no v1 release |
 
-Safe updates, cursor styles and the F/R editor options passed owner testing,
-PR CI and deployed checks. Current local work is the measured **pull-down menu
-geometry and VGA punctuation correction (#46)**. The owner gave the go-ahead;
-PR CI and deployment verification remain pending. Selected-disabled color customization is tracked
-separately in #45. The original
+Safe updates, cursor styles, the F/R editor options and the measured **pull-down
+menu geometry and VGA punctuation correction (#46, PR #47)** passed owner review,
+PR CI and deployed checks. Current work closes the remaining Phase 0 visual and
+native-browser verification gaps. Selected-disabled color customization is
+tracked separately in #45. The original
 plan is preserved as a dated reference; [decisions.md](decisions.md) records
 approved changes such as Enter-only output return and clearing each new run.
 
@@ -222,14 +224,20 @@ The original local folder was safely fast-forwarded after clean-main verificatio
 The first CI run's six layout assertions assumed a Windows notice height; the
 final checks measure available height and pass with Linux system fonts too.
 
-Local #46 corrects the three measured menu widths and renders menu ellipses as
-three VGA period cells. Both new Chromium cases reproduced the old differences
+PR #47 closes #46, correcting the three measured menu widths and rendering menu
+ellipses as three VGA period cells. Both new Chromium cases reproduced the old differences
 before the source correction. The File-menu snapshot changes only five caption
 rows, with no attribute changes. All **69 affected shell/window browser checks**
 pass across Chromium, Firefox and Playwright WebKit, alongside lint, strict
-typecheck, 88 unit tests, build and manual links. The owner gave the go-ahead;
-the final 267-case PR CI remains open. No whole-product or full original-IDE fidelity claim
-follows from these focused comparisons.
+typecheck, 88 unit tests, build and manual links. After the owner's go-ahead,
+all **267 browser CI cases**, the other required checks, CodeQL and Pages passed
+on `2f55803`. Nine Chromium smoke cases passed on its exact Pages preview, then
+nine passed on production after squash merge `60da202`. Production serves
+`index-wmcQk0c3.js` with COOP/COEP; the public manual includes extension-shortcut
+guidance and PyTurbo's Run-menu screenshot. The clean original local folder was
+safely fast-forwarded to that merge. Native Chrome spot checks are documented in
+the [Phase 0 checklist](phase-zero-status.md#native-chrome-spot-checks-29-october-2026).
+No whole-product or full original-IDE fidelity claim follows from these checks.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
@@ -241,8 +249,11 @@ repository-level Actions permission needed for release PR creation; it is enable
 while default workflow token permissions remain read-only.
 The first automated release proposal incorrectly selected `1.0.0`. PR #11 fixed
 the initial version to `0.1.0`; PR #15 fixed generated-file lint and human-triggered
-PR checks. The updated proposal at `c6b8a84` passes all five required jobs, CodeQL and Pages
-and remains an unpublished draft. No v1 release has been published.
+PR checks. The updated [release proposal](https://github.com/abhay-yemekar/pyturbo/pull/3)
+at `e6e7471` passes all five required jobs, CodeQL and Pages and remains an
+unpublished draft. Its exact manifest/changelog diff was reviewed before routine
+workflow approval; no owner action is currently required for those checks.
+Subsequent regenerated revisions need their own checks. No v1 release has been published.
 
 Record final command results in the PR validation record or update this file.
 Successful builds and small geometry fixtures do not certify the whole product.
@@ -256,8 +267,8 @@ Successful builds and small geometry fixtures do not certify the whole product.
    modes. Commit only PyTurbo screenshots/baselines.
 4. Complete real browser/OS shortcut tests, Safari/iOS and Android checks. The
    owner approved continuing implementation while these checks remain open.
-5. Complete PR CI and deployment of the local #46 menu correction;
-   verify customized selected-disabled colors for #45 without guessing a rule.
+5. Verify customized selected-disabled colors for #45 without guessing a rule;
+   complete the remaining [Phase 0 checks](phase-zero-status.md).
 6. Verify save failures/conflicts, IME, directional selections, clipboard,
    imported/shared projects, repeated modules, output floods and stop while
    waiting for input or debugger commands.
