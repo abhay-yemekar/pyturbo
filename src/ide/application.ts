@@ -2730,6 +2730,8 @@ export class Application {
     const window = this.openEditor(file.name, file.content);
     window.editor?.goto(error.line - 1, error.column - 1);
     this.keepCursorVisible();
+    this.syncInput();
+    this.focus();
     this.dirty = true;
   }
   private preferencesDialog(): void {

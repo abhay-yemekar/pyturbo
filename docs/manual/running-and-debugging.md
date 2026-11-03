@@ -60,6 +60,13 @@ Message window, **Alt+F7 / Alt+F8** for previous/next error, or Search → Go to
 line number to inspect the source. A runtime error can leave a traceback in
 the last output even after the editor is visible.
 
+Open **Window → Message**, select an entry with the arrow keys, then press
+**Space** or **Enter** to open its source at the reported position. You can also
+double-click the entry on the canvas. Continue editing at that caret; an already
+open file retains its current unsaved text.
+
+![PyTurbo showing the reported error position while retaining a later draft](../images/manual-error-source.png)
+
 ## Program arguments and project imports
 
 Open **Run → Arguments…** and separate arguments with `|`.
