@@ -67,6 +67,119 @@ test('shows dialogs, menus and Help when invoked from the output screen', async 
   expect(await output(page).textContent()).toBe('workflow audit\n');
 });
 
+test.describe('Message error navigation', () => {
+  test.use({ serviceWorkers: 'block' });
+  for (const method of ['Space', 'Enter', 'double-click'] as const) {
+    test(`keeps native editing aligned after Message ${method}`, async ({ page }) => {
+      await page.setViewportSize({ width: 1000, height: 700 });
+      await ready(page);
+      const source = 'total = 0\nprint(10 / total)\n';
+      await editor(page).fill(source);
+      await page.keyboard.press('Control+F9');
+      await expect(page.getByTestId('runtime-status')).toContainText(
+        'Program stopped with an error',
+      );
+      await command(page, 'Message');
+      await expect(page.getByLabel('Message content', { exact: true })).toContainText(
+        'ZeroDivisionError',
+      );
+      if (method === 'double-click') {
+        await page
+          .locator('canvas')
+          .first()
+          .dblclick({ position: { x: 4 * 9, y: 16 * 16 + 8 } });
+      } else {
+        await page.keyboard.press(method);
+      }
+      const offset = source.indexOf('10');
+      await expect(editor(page)).toBeFocused();
+      await expect
+        .poll(() =>
+          editor(page).evaluate((input: HTMLTextAreaElement) => [
+            input.selectionStart,
+            input.selectionEnd,
+          ]),
+        )
+        .toEqual([offset, offset]);
+      await expect(editor(page)).toHaveAttribute('aria-description', 'Line 2, column 7');
+      await expect(editor(page)).toHaveValue(source);
+      await page.keyboard.type('#');
+      await expect(editor(page)).toHaveValue(`${source.slice(0, offset)}#${source.slice(offset)}`);
+    });
+  }
+  test('opens a closed saved error target with the native caret at its error position', async ({
+    page,
+  }) => {
+    await ready(page);
+    const source = 'total = 0\nprint(10 / total)\n';
+    await editor(page).fill(source);
+    await page.keyboard.press('F2');
+    await expect(page.getByRole('status')).toContainText('NONAME00.PY saved.');
+    await page.keyboard.press('Control+F9');
+    await expect(page.getByTestId('runtime-status')).toContainText('Program stopped with an error');
+    await page.keyboard.press('Alt+F8');
+    await expect(editor(page)).toHaveAttribute('aria-description', 'Line 2, column 7');
+    await page.keyboard.press('Alt+F3');
+    await command(page, 'New');
+    await expect(editor(page)).toHaveValue('');
+    await command(page, 'Message');
+    await expect(page.getByLabel('Message content', { exact: true })).toContainText(
+      'ZeroDivisionError',
+    );
+    await page.keyboard.press('Space');
+    const offset = source.indexOf('10');
+    await expect(editor(page)).toBeFocused();
+    await expect(editor(page)).toHaveValue(source);
+    await expect(editor(page)).toHaveAttribute('aria-description', 'Line 2, column 7');
+    await expect
+      .poll(() =>
+        editor(page).evaluate((input: HTMLTextAreaElement) => [
+          input.selectionStart,
+          input.selectionEnd,
+        ]),
+      )
+      .toEqual([offset, offset]);
+    await page.keyboard.type('#');
+    await expect(editor(page)).toHaveValue(`${source.slice(0, offset)}#${source.slice(offset)}`);
+  });
+  test('preserves a later unsaved draft when returning from an error message', async ({
+    page,
+  }, testInfo) => {
+    await ready(page);
+    const original = 'total = 0\nprint(10 / total)\n';
+    await editor(page).fill(original);
+    await page.keyboard.press('Control+F9');
+    await expect(page.getByTestId('runtime-status')).toContainText('Program stopped with an error');
+    await page.keyboard.press('Alt+F8');
+    await expect(editor(page)).toHaveAttribute('aria-description', 'Line 2, column 7');
+    const draft = `${original}# unsaved draft after the run\n`;
+    await editor(page).fill(draft);
+    await command(page, 'Message');
+    await expect(page.getByLabel('Message content', { exact: true })).toContainText(
+      'ZeroDivisionError',
+    );
+    await page.keyboard.press('Space');
+    const offset = draft.indexOf('10');
+    await expect(editor(page)).toBeFocused();
+    await expect(editor(page)).toHaveAttribute('aria-description', 'Line 2, column 7');
+    await expect
+      .poll(() =>
+        editor(page).evaluate((input: HTMLTextAreaElement) => [
+          input.selectionStart,
+          input.selectionEnd,
+        ]),
+      )
+      .toEqual([offset, offset]);
+    await expect(editor(page)).toHaveValue(draft);
+    await page
+      .locator('canvas')
+      .first()
+      .screenshot({ path: testInfo.outputPath('message-source-navigation.png') });
+    await page.keyboard.type('#');
+    await expect(editor(page)).toHaveValue(`${draft.slice(0, offset)}#${draft.slice(offset)}`);
+  });
+});
+
 test('runs the selected source while an Output or Help window is active', async ({ page }) => {
   await ready(page);
   await editor(page).fill('print("selected source")');

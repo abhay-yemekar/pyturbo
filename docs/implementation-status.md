@@ -6,6 +6,8 @@ verified behavior are different. This is not a completed v1 launch checklist.
 For usage instructions, see [PyTurbo’s Manual](manual/README.md). The
 [Phase 0 checklist](phase-zero-status.md) records each foundation task, its
 evidence and its remaining exit checks. **Phase 0 is not complete.**
+The [Phase 1 checklist](phase-one-status.md) maps the next MVP stage to existing
+features, verification evidence and the local error-navigation correction.
 
 ## Position against the roadmap
 
@@ -24,11 +26,10 @@ update action. No phase is certified complete while its exit checks remain open.
 
 Safe updates, cursor styles, the F/R editor options and the measured **pull-down
 menu geometry and VGA punctuation correction (#46, PR #47)** passed owner review,
-PR CI and deployed checks. Current work closes the remaining Phase 0 visual and
-native-browser verification gaps. Selected-disabled color customization is
-delivered in #45 / PR #50. Current verification adds an independently measured
-ready-editor status row; #52 corrects the measured editor indicator
-geometry while broader desktop and native shortcuts remain open. The original
+PR CI and deployed checks. Phase 0 visual/native gates remain open; current local
+work delivers the owner-tested Phase 1 error-to-source correction in #55. Selected-disabled
+colors (#45 / PR #50), the ready-editor status row (#51) and editor indicator
+(#52 / PR #54) have delivery evidence below. The original
 plan is preserved as a dated reference; [decisions.md](decisions.md) records
 approved changes such as Enter-only output return and clearing each new run.
 
@@ -273,9 +274,21 @@ All 101 unit tests, configured coverage, lint, strict typecheck and the producti
 build pass. All 87 editor browser cases pass across Chromium, Firefox and
 Playwright WebKit without retries, including the indicator/save pixel case.
 The manual has an explanation and original PyTurbo screenshot. The owner
-confirmed the local counter and save-marker behavior on 3 November. Full-suite
-CI and deployment results are recorded in the PR validation record; complete
-window/frame fidelity remains a separate gate.
+confirmed the local counter and save-marker behavior on 3 November. PR #54 passed
+all 276 browser CI cases, the other required checks, CodeQL and Pages, then merged
+as `be6a848`. Ten production Chromium smoke cases pass on `index-BBNg-XCq.js`
+with COOP/COEP. The public manual/image and clean original folder are updated.
+Complete window/frame fidelity remains a separate gate.
+
+Local Phase 1 issue #55 fixes a reproduced error-navigation mismatch: the canvas
+caret moved to the error, but native typing remained at the old position.
+The new Space regression first failed with native offset 28 instead of 16.
+Synchronizing input/focus after positioning passes 33 workflow cases and three
+additional unsaved-draft cases across Chromium, Firefox and Playwright WebKit.
+All 101 unit tests with configured coverage, lint, strict typecheck and build
+pass. These focused cases use real Python. The owner confirmed the local fix and
+authorized publication on 3 November. The expanded 291-case PR CI and deployment
+remain delivery gates; their results are recorded in the pull request.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports

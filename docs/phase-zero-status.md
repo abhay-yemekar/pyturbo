@@ -98,3 +98,5 @@ implementation while real-device gates stay explicitly open.
 The broader [implementation status](implementation-status.md) tracks later-phase
 features and launch gates. The automated 0.1.0 release PR remains an unpublished
 draft; completing Phase 0 does not itself authorize publishing a release.
+The [Phase 1 checklist](phase-one-status.md) records the next MVP stage and the
+current local error-navigation hardening without marking Phase 0 complete.
