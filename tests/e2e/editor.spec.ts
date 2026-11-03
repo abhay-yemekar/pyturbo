@@ -2,6 +2,10 @@ import { readFileSync } from 'node:fs';
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import LZString from 'lz-string';
 
+const indicatorReference = JSON.parse(
+  readFileSync(new URL('../unit/fixtures/editor-indicator.json', import.meta.url), 'utf8'),
+) as { cases: Array<{ line: number; column: number; modified: boolean; cells: string }> };
+
 const atlas = JSON.parse(
   readFileSync(
     new URL('../../public/fonts/Px437_IBM_VGA_9x16.atlas.json', import.meta.url),
@@ -130,6 +134,58 @@ test('returns keyboard input to the editor after clicking an empty desktop margi
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('Backspace');
   await expect(editor).toHaveValue('print("Hello)');
+});
+
+test.describe('reference editor position indicator', () => {
+  test.use({ serviceWorkers: 'block' });
+  test('anchors coordinates and restores the modified cell when saving', async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width: 800, height: 500 });
+    const editor = await open(page);
+    await editor.press('Control+PageUp');
+    await page.keyboard.press('F5');
+    const canvas = page.getByRole('img', { name: /VGA desktop/ });
+    await expect(canvas).toHaveAttribute('width', '720');
+    await expect(canvas).toHaveAttribute('height', '400');
+    const mismatch = (cells: string) =>
+      canvas.evaluate(
+        (element: HTMLCanvasElement, glyphs) => {
+          const context = element.getContext('2d');
+          if (!context) throw new Error('Canvas is unavailable');
+          const data = context.getImageData(9, 23 * 16, glyphs.length * 9, 16).data;
+          for (let column = 0; column < glyphs.length; column++)
+            for (let y = 0; y < 16; y++)
+              for (let x = 0; x < 9; x++) {
+                const foreground = !!(glyphs[column][y] & (1 << x));
+                const expected = foreground ? [255, 255, 255, 255] : [0, 0, 170, 255];
+                const offset = (y * glyphs.length * 9 + column * 9 + x) * 4;
+                const actual = Array.from(data.slice(offset, offset + 4));
+                if (actual.some((byte, index) => byte !== expected[index]))
+                  return { column, x, y, expected, actual };
+              }
+          return null;
+        },
+        Array.from(
+          cells,
+          (character) => atlas.glyphs[character === '═' ? 0xcd : character.charCodeAt(0)],
+        ),
+      );
+    await expect.poll(() => mismatch(indicatorReference.cases[0].cells)).toBeNull();
+    for (const sample of indicatorReference.cases.slice(1)) {
+      const source = `${'\n'.repeat(sample.line - 1)}${'x'.repeat(sample.column - 1)}`;
+      await editor.fill(source);
+      await expect.poll(() => mismatch(sample.cells)).toBeNull();
+      await expect(editor).toHaveValue(source);
+    }
+    await canvas.screenshot({ path: testInfo.outputPath('editor-indicator-10-13.png') });
+    const source = await editor.inputValue();
+    await page.keyboard.press('F2');
+    await expect(page.getByRole('status')).toContainText('NONAME00.PY saved.');
+    const savedCells = indicatorReference.cases[3].cells.replaceAll('*', '═');
+    await expect.poll(() => mismatch(savedCells)).toBeNull();
+    await expect(editor).toHaveValue(source);
+  });
 });
 
 test('keeps pointer drag selection editable after releasing the canvas', async ({ page }) => {

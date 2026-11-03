@@ -1,6 +1,6 @@
 # Phase 0 checklist
 
-Updated on 30 October 2026. **Phase 0 is not complete.** This checklist tracks
+Updated on 3 November 2026. **Phase 0 is not complete.** This checklist tracks
 the five foundation tasks and exit criteria in the
 [agreed roadmap](project-plan.md#phase-0-foundations-and-spikes-1-week).
 Implemented features from later phases do not close these verification gates.
@@ -45,8 +45,11 @@ selected-disabled Color-mode attributes and illustrated manual after owner
 testing. All 270 browser CI cases and required checks passed; ten exact-preview
 and ten production Chromium smoke cases passed after merge `8f6f3e0`.
 
-The normal ready-editor status row now has a reference fixture and three passing
-browser checks. CI and deployed evidence is recorded in the PR validation record. This does not close the complete
+The normal ready-editor status row's reference fixture and regression shipped in
+[PR #51](https://github.com/abhay-yemekar/pyturbo/pull/51) after all 273 browser CI
+cases and required checks passed. The new exact-preview and production cases
+also pass. The owner-tested #52 correction addresses the editor frame's position indicator.
+This does not close the complete
 desktop or native shortcut gates.
 
 ## Native Chrome spot checks, 29 October 2026

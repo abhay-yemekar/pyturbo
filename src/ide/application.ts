@@ -1054,15 +1054,19 @@ export class Application {
       }
       if (active) {
         const p = this.editorPosition(editor, layout);
+        const line = String(p.line + 1);
+        const column = this.visualColumn(lines[p.line] ?? '', p.col) + editor.tabOffset + 1;
+        // Measured positions anchor the colon at column 10 with one blank
+        // around the coordinates. Reserve the marker for unusually large values.
+        const indicatorX = Math.max(3, 9 - line.length);
+        const indicatorEnd = r.w > 24 ? 18 : r.w - 2;
         b.text(
-          r.x + 2,
+          r.x + indicatorX,
           r.y + r.h - 1,
-          `${editor.modified ? '*' : ' '} ${p.line + 1}:${this.visualColumn(lines[p.line] ?? '', p.col) + editor.tabOffset + 1} `.padEnd(
-            14,
-            '═',
-          ),
+          ` ${line}:${column} `.slice(0, Math.max(0, indicatorEnd - indicatorX)),
           frameAttr,
         );
+        if (editor.modified) b.set(r.x + 2, r.y + r.h - 1, '*', frameAttr);
         if (r.w > 24)
           this.drawScrollBar(r.x + 18, r.y + r.h - 1, r.w - 20, editor.scrollX, maxX, false, group);
         this.drawScrollBar(r.x + r.w - 1, r.y + 1, r.h - 2, editor.scrollY, maxY, true, group);

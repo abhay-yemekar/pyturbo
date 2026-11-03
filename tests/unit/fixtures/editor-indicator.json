@@ -1,0 +1,36 @@
+{
+  "source": "https://turboc.pages.dev",
+  "evidence": "Independently classified Turbo C++ 3.0 native footer cells, 30 October 2026. Modified/unmodified and one-/two-digit line/column states. Original images and DOS bundle stay private.",
+  "relativeFirstColumn": 1,
+  "colonColumn": 10,
+  "modifiedColumn": 2,
+  "horizontalScrollColumn": 18,
+  "attribute": 31,
+  "cases": [
+    {
+      "line": 1,
+      "column": 1,
+      "modified": false,
+      "cells": "═══════ 1:1 ═════"
+    },
+    {
+      "line": 1,
+      "column": 12,
+      "modified": true,
+      "cells": "═*═════ 1:12 ════"
+    },
+    {
+      "line": 10,
+      "column": 1,
+      "modified": true,
+      "cells": "═*════ 10:1 ═════"
+    },
+    {
+      "line": 10,
+      "column": 13,
+      "modified": true,
+      "cells": "═*════ 10:13 ════"
+    }
+  ],
+  "scope": "Active Color-mode frame; relative geometry facts with the approved 9x16 font, not literal equality to the original 8x16 bitmap."
+}
