@@ -182,7 +182,7 @@ test.describe('reference editor position indicator', () => {
     const source = await editor.inputValue();
     await page.keyboard.press('F2');
     await expect(page.getByRole('status')).toContainText('NONAME00.PY saved.');
-    const savedCells = indicatorReference.cases[3].cells.replace('*', '═');
+    const savedCells = indicatorReference.cases[3].cells.replaceAll('*', '═');
     await expect.poll(() => mismatch(savedCells)).toBeNull();
     await expect(editor).toHaveValue(source);
   });
