@@ -210,6 +210,22 @@ configuration has not been independently established. That single state is not
 treated as a factory default. Its zoomed frame
 spans rows 1–23; initial-window geometry needs separate configuration evidence.
 
+## Editor position indicator
+
+Independent original-canvas probes establish a colon at relative column 10 for
+the measured `1:1`, `1:12`, `10:1` and `10:13` positions. The line number ends at
+column 9; the column number starts at 11. One blank surrounds the coordinate
+text, and the remaining bottom-frame cells retain their double horizontal line.
+Cell 2 retains its frame when unmodified and becomes `*` after editing. Only
+these cell facts are recorded in `tests/unit/fixtures/editor-indicator.json`.
+
+The #52 correction anchors the changing coordinate text within that frame and
+restores the separate modified-marker cell when saving. Tests cover translated
+window origins, digit changes, long lines and a narrow frame. The owner confirmed
+the local behavior on 3 November; final CI/deployment evidence is recorded in the
+PR validation record. Scrollbar-state fidelity and original
+extreme-value formatting remain separate verification limits.
+
 ## Editor viewport navigation
 
 Private original-IDE captures verify a one-row overlap: Page Down moves 13

@@ -10,6 +10,13 @@ Click a text position to move the caret. Use the arrow keys to move and
 insertion and overwrite. Undo is **Alt+Backspace** or **Ctrl+Z** with the default
 CUA keys enabled; redo is **Shift+Alt+Backspace** or **Ctrl+Shift+Z**.
 
+The blue editor's bottom frame shows **line:column**, counted from one. For
+example, **10:13** means line 10, column 13. An **\*** near the left corner means
+the file has unsaved changes. **F2** saves it and restores the frame at that mark;
+the position remains visible as you continue editing.
+
+![PyTurbo's editor at line 10, column 13, with an unsaved-change marker](../images/manual-editor-indicator.png)
+
 By default, **Tab** inserts spaces to the next four-column tab stop.
 **Shift+Tab** unindents. Enter copies the line’s indentation and adds a level
 after a colon. Use **Options → Environment → Editor…** to change these options.

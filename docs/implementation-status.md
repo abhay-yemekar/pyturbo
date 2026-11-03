@@ -1,6 +1,6 @@
 # Implementation and verification status
 
-Updated on 30 October 2026. Source coverage and
+Updated on 3 November 2026. Source coverage and
 verified behavior are different. This is not a completed v1 launch checklist.
 
 For usage instructions, see [PyTurbo’s Manual](manual/README.md). The
@@ -27,7 +27,8 @@ menu geometry and VGA punctuation correction (#46, PR #47)** passed owner review
 PR CI and deployed checks. Current work closes the remaining Phase 0 visual and
 native-browser verification gaps. Selected-disabled color customization is
 delivered in #45 / PR #50. Current verification adds an independently measured
-ready-editor status row while broader desktop and native shortcuts remain open. The original
+ready-editor status row; #52 corrects the measured editor indicator
+geometry while broader desktop and native shortcuts remain open. The original
 plan is preserved as a dated reference; [decisions.md](decisions.md) records
 approved changes such as Enter-only output return and clearing each new run.
 
@@ -258,10 +259,23 @@ original folder was safely fast-forwarded to the merge.
 The normal ready-editor status row now has independently measured text/attribute
 facts and a pixel regression using PyTurbo's approved licensed atlas. All three
 focused browser cases pass locally, including menu-hint restoration and source
-preservation. The PR validation record tracks the expanded 273-case CI suite and
-deployed checks. This is verification
+preservation. PR #51 passed all 273 browser CI cases and other required checks,
+then merged as `39d7b15`. The exact-preview case and production case pass against
+the same deployed app bundle; the independent fixture is public on main.
+This is verification
 work with no application behavior or asset change; it does not close the full
 desktop, other status contexts or native shortcut gates.
+
+Issue #52 corrects the editor frame's line/column indicator from independently
+measured original positions. Ten new unit cases cover coordinates and frame
+cells at two window origins, narrow-window clipping and scrollbar separation.
+All 101 unit tests, configured coverage, lint, strict typecheck and the production
+build pass. All 87 editor browser cases pass across Chromium, Firefox and
+Playwright WebKit without retries, including the indicator/save pixel case.
+The manual has an explanation and original PyTurbo screenshot. The owner
+confirmed the local counter and save-marker behavior on 3 November. Full-suite
+CI and deployment results are recorded in the PR validation record; complete
+window/frame fidelity remains a separate gate.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports
