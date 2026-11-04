@@ -8,6 +8,36 @@ does not certify overall visual fidelity or complete Phase 0.
 The [Phase 0 checklist](phase-zero-status.md) maps verified evidence and remaining
 work to each foundation task and exit criterion. **Phase 0 is not complete.**
 
+## Editor scrollbar comparison, 3 November 2026
+
+Private lossless captures of the unchanged reference DOS bundle establish the
+active editor's empty, short and long-file controls. The independently recorded
+[cell facts](../tests/unit/fixtures/editor-scrollbars.json) contain semantic
+glyphs, positions, attributes and pointer results. Original images, bitmap masks
+and executable data remain excluded from the repository and shipped app.
+
+- In an 80-column zoomed editor, the horizontal arrows occupy columns 18 and 77;
+  the thumb travels from 19 to 76. Track cells are `▒` with attribute `0x13`;
+  arrows and thumb use `0x31`. Empty vertical controls remain visible, with an
+  initial thumb immediately below the top arrow.
+- Empty and short files retain a horizontal range of 0–399. A private 120-character
+  marker and 280 left-arrow clicks after dragging to the end independently
+  establish that endpoint. A horizontal page advances 78 columns in that window;
+  a vertical page advances 20 rows, overlapping one of its 21 content rows.
+- Scrolling alone retains source, modified state and caret position. Help and
+  Output have separate, content-bounded policies; their existing behavior is
+  retained by this correction.
+- The owner retained line-end caret clamping rather than original virtual-column
+  padding. PyTurbo also keeps arbitrary long Python lines and reserves room for
+  the insertion caret after their final character. These are explicit scope
+  boundaries of the original comparison.
+
+Local issue #53 corrects these controls and adds unit and browser regressions.
+The original font is 8×16; expected PyTurbo pixels use semantic cells with the
+approved 9×16 atlas. This is a control comparison, not a claim of full bitmap
+equality. The owner confirmed the local correction on 4 November. PR CI and
+deployment remain separate delivery gates, recorded in the pull request.
+
 ## Verified at the engine milestone
 
 - `CellBuffer` stores Unicode glyphs and VGA attribute bytes in an explicit cell

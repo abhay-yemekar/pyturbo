@@ -1,0 +1,33 @@
+{
+  "source": "https://turboc.pages.dev",
+  "evidence": "Independent Turbo C++ 3.0 cell and pointer observations, 3 November 2026. Unchanged original DOS bundle in a private isolated loader. Original images/binaries are excluded.",
+  "scope": "Active 80x23 editor at row 1 in the original 80x25 grid; semantic cells with PyTurbo's approved 9x16 atlas, not literal equality to the original 8x16 bitmap.",
+  "horizontal": {
+    "firstColumn": 18,
+    "lastColumn": 77,
+    "maximum": 399,
+    "pageStep": 78,
+    "cases": [
+      { "offset": 0, "thumbColumn": 19 },
+      { "offset": 10, "thumbColumn": 20 },
+      { "offset": 78, "thumbColumn": 30 },
+      { "offset": 88, "thumbColumn": 32 },
+      { "offset": 399, "thumbColumn": 76 }
+    ]
+  },
+  "vertical": {
+    "column": 79,
+    "firstRow": 2,
+    "lastRow": 22,
+    "pageStep": 20,
+    "cases": [
+      { "lines": 1, "offset": 0, "thumbRow": 3 },
+      { "lines": 37, "offset": 0, "thumbRow": 3 },
+      { "lines": 37, "offset": 16, "thumbRow": 11 },
+      { "lines": 37, "offset": 20, "thumbRow": 13 }
+    ]
+  },
+  "glyphs": { "left": "◄", "right": "►", "up": "▲", "down": "▼", "thumb": "■", "track": "▒" },
+  "attributes": { "track": 19, "arrows": 49, "thumb": 49 },
+  "behavior": "Arrow/page/drag scrolling changes the viewport without modifying source or caret. Horizontal end measured with a 120-character marker: after dragging to the end, 280 left-arrow clicks reveal its final character at the left edge (119 + 280 = 399). Empty vertical arrows retain their controls without scrolling. PyTurbo retains owner-approved line-end caret clamping."
+}

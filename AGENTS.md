@@ -7,3 +7,4 @@
 - Do not add author attribution or co-author trailers. Verify the owner's human Git author and committer identity before committing.
 - Use the plan's issue, feature branch, pull request, and passing CI workflow. Preserve unfinished work and avoid rewriting shared history.
 - Keep implementation status and verification limits honest, especially visual fidelity, runtime, browser compatibility, and deployment checks.
+- Explicitly notify the owner when Phase 1 meets the agreed plan's exit criteria; keep incomplete checks visible until then.
