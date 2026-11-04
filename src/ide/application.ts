@@ -961,6 +961,11 @@ export class Application {
     }
     return { line: low, col: editor.cursor - layout.offsets[low] };
   }
+  private editorScrollMaximumX(editor: EditorBuffer, width: number): number {
+    // The original editor retains a 0..399 horizontal viewport range even
+    // for an empty file. Preserve PyTurbo's longer Python-line overflow too.
+    return Math.max(399, this.editorLayout(editor).maxWidth - (width - 2) + 1);
+  }
   private shadow(x: number, y: number, w: number, h: number): void {
     if (this.settings.videoMode !== 'monochrome') this.buffer.shadow(x, y, w, h);
   }
@@ -1009,7 +1014,7 @@ export class Application {
       const lines = layout.lines;
       const maxY = Math.max(0, lines.length - 1);
       editor.scrollY = Math.max(0, Math.min(maxY, editor.scrollY));
-      const maxX = Math.max(0, layout.maxWidth - (r.w - 2));
+      const maxX = this.editorScrollMaximumX(editor, r.w);
       editor.scrollX = Math.max(0, Math.min(maxX, editor.scrollX));
       const selectedCell = editor.selectionTester();
       for (
@@ -1068,8 +1073,26 @@ export class Application {
         );
         if (editor.modified) b.set(r.x + 2, r.y + r.h - 1, '*', frameAttr);
         if (r.w > 24)
-          this.drawScrollBar(r.x + 18, r.y + r.h - 1, r.w - 20, editor.scrollX, maxX, false, group);
-        this.drawScrollBar(r.x + r.w - 1, r.y + 1, r.h - 2, editor.scrollY, maxY, true, group);
+          this.drawScrollBar(
+            r.x + 18,
+            r.y + r.h - 1,
+            r.w - 20,
+            editor.scrollX,
+            maxX,
+            false,
+            group,
+            true,
+          );
+        this.drawScrollBar(
+          r.x + r.w - 1,
+          r.y + 1,
+          r.h - 2,
+          editor.scrollY,
+          maxY,
+          true,
+          group,
+          true,
+        );
       }
     } else {
       const lines = this.windowLines(window);
@@ -1125,13 +1148,19 @@ export class Application {
     maximum: number,
     vertical: boolean,
     group = 'edit',
+    controlsVisible = maximum > 0,
   ): void {
     const b = this.buffer;
     const page = this.attr(`${group}ScrollBar`, 0x13);
     const control = this.attr(`${group}Arrows`, 0x31);
     for (let index = 0; index < length; index++)
-      b.set(x + (vertical ? 0 : index), y + (vertical ? index : 0), maximum > 0 ? '▒' : '▓', page);
-    if (maximum <= 0 || length < 3) return;
+      b.set(
+        x + (vertical ? 0 : index),
+        y + (vertical ? index : 0),
+        controlsVisible ? '▒' : '▓',
+        page,
+      );
+    if (!controlsVisible || length < 3) return;
     b.set(x, y, vertical ? '▲' : '◄', control);
     b.set(
       x + (vertical ? 0 : length - 1),
@@ -1140,7 +1169,9 @@ export class Application {
       control,
     );
     const thumb =
-      1 + Math.round((Math.max(0, Math.min(maximum, position)) / maximum) * (length - 3));
+      maximum > 0
+        ? 1 + Math.round((Math.max(0, Math.min(maximum, position)) / maximum) * (length - 3))
+        : 1;
     b.set(
       x + (vertical ? 0 : thumb),
       y + (vertical ? thumb : 0),
@@ -3659,7 +3690,10 @@ export class Application {
         const thumb = r.y + 2 + Math.round((offset / max) * Math.max(0, trackLength - 1));
         if (y === r.y + 1 || y === r.y + r.h - 2) this.scrollWindow(window, y === r.y + 1 ? -1 : 1);
         else if (y === thumb) this.drag = { mode: 'scroll-y', x, y, bounds: { ...r }, offset };
-        else this.scrollWindow(window, y < thumb ? -(r.h - 2) : r.h - 2);
+        else {
+          const pageStep = r.h - (window.editor ? 3 : 2);
+          this.scrollWindow(window, y < thumb ? -pageStep : pageStep);
+        }
       }
     } else if (
       window.editor &&
@@ -3669,7 +3703,7 @@ export class Application {
       x <= r.x + r.w - 3
     ) {
       const editor = window.editor;
-      const max = Math.max(0, this.editorLayout(editor).maxWidth - (r.w - 2));
+      const max = this.editorScrollMaximumX(editor, r.w);
       if (max > 0) {
         const trackLength = r.w - 22;
         const thumb = r.x + 19 + Math.round((editor.scrollX / max) * Math.max(0, trackLength - 1));
@@ -3747,7 +3781,7 @@ export class Application {
         else this.active.scrollY = next;
       }
       if (d.mode === 'scroll-x' && this.active.editor) {
-        const max = Math.max(0, this.editorLayout(this.active.editor).maxWidth - (r.w - 2));
+        const max = this.editorScrollMaximumX(this.active.editor, r.w);
         this.active.editor.scrollX = Math.max(
           0,
           Math.min(max, Math.round((d.offset ?? 0) + ((x - d.x) * max) / Math.max(1, r.w - 23))),

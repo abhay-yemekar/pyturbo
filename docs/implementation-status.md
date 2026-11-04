@@ -7,7 +7,7 @@ For usage instructions, see [PyTurbo’s Manual](manual/README.md). The
 [Phase 0 checklist](phase-zero-status.md) records each foundation task, its
 evidence and its remaining exit checks. **Phase 0 is not complete.**
 The [Phase 1 checklist](phase-one-status.md) maps the next MVP stage to existing
-features, verification evidence and the local error-navigation correction.
+features, combined student-workflow evidence and the remaining visual gates.
 
 ## Position against the roadmap
 
@@ -27,7 +27,7 @@ update action. No phase is certified complete while its exit checks remain open.
 Safe updates, cursor styles, the F/R editor options and the measured **pull-down
 menu geometry and VGA punctuation correction (#46, PR #47)** passed owner review,
 PR CI and deployed checks. Phase 0 visual/native gates remain open; current local
-work delivers the owner-tested Phase 1 error-to-source correction in #55. Selected-disabled
+work corrects the measured editor scrollbar controls in #53. Selected-disabled
 colors (#45 / PR #50), the ready-editor status row (#51) and editor indicator
 (#52 / PR #54) have delivery evidence below. The original
 plan is preserved as a dated reference; [decisions.md](decisions.md) records
@@ -280,15 +280,35 @@ as `be6a848`. Ten production Chromium smoke cases pass on `index-BBNg-XCq.js`
 with COOP/COEP. The public manual/image and clean original folder are updated.
 Complete window/frame fidelity remains a separate gate.
 
-Local Phase 1 issue #55 fixes a reproduced error-navigation mismatch: the canvas
+Phase 1 issue #55 fixed a reproduced error-navigation mismatch: the canvas
 caret moved to the error, but native typing remained at the old position.
 The new Space regression first failed with native offset 28 instead of 16.
 Synchronizing input/focus after positioning passes 33 workflow cases and three
 additional unsaved-draft cases across Chromium, Firefox and Playwright WebKit.
 All 101 unit tests with configured coverage, lint, strict typecheck and build
 pass. These focused cases use real Python. The owner confirmed the local fix and
-authorized publication on 3 November. The expanded 291-case PR CI and deployment
-remain delivery gates; their results are recorded in the pull request.
+authorized publication on 3 November. [PR #56](https://github.com/abhay-yemekar/pyturbo/pull/56)
+passed all 291 browser CI cases without failed/flaky results and merged as
+`5861c11`. Its exact preview and production passed five error-navigation checks
+and the combined student journey in Chromium, Firefox and Playwright WebKit:
+write, two live inputs, follow/fix an error with keyboard editing, rerun,
+save, close/reopen, share to an isolated recipient and run the shared source.
+Production serves `index-BRAtIV2J.js` with COOP/COEP. Post-merge main CI and
+the separate unpublished release-draft CI also passed.
+
+Local issue #53 uses independently measured original scrollbar cells and pointer
+behavior: editor controls remain visible on empty files; horizontal offsets span
+0–399 even for short lines; vertical page clicks overlap one text row. A
+separate regression reproduced a long Python line's hidden insertion caret
+(scroll offset 922 instead of 923). The correction retains longer Python lines,
+source contents and the owner's line-end caret clamping. All 115 unit tests with
+configured coverage, lint, strict typecheck and build pass. All 132 editor,
+scrollbar and real-Python workflow cases pass across Chromium, Firefox and
+Playwright WebKit without retries. The refreshed local build serves
+`index-DrSoShT7.js`; a real Python Hello run and original manual screenshot were
+verified on 4 November. The owner confirmed the local correction and authorized
+publication that day. The full 300-case PR CI and deployment remain delivery
+gates; their results are recorded in the pull request.
 
 The owner approved a [private PyTurbo board](https://github.com/users/abhay-yemekar/projects/1).
 It is configured with Backlog, Ready, In progress, In review and Done, imports

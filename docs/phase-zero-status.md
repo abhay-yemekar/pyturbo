@@ -1,6 +1,6 @@
 # Phase 0 checklist
 
-Updated on 3 November 2026. **Phase 0 is not complete.** This checklist tracks
+Updated on 4 November 2026. **Phase 0 is not complete.** This checklist tracks
 the five foundation tasks and exit criteria in the
 [agreed roadmap](project-plan.md#phase-0-foundations-and-spikes-1-week).
 Implemented features from later phases do not close these verification gates.
@@ -49,8 +49,11 @@ The normal ready-editor status row's reference fixture and regression shipped in
 [PR #51](https://github.com/abhay-yemekar/pyturbo/pull/51) after all 273 browser CI
 cases and required checks passed. The new exact-preview and production cases
 also pass. The owner-tested #52 correction addresses the editor frame's position indicator.
-This does not close the complete
-desktop or native shortcut gates.
+[PR #54](https://github.com/abhay-yemekar/pyturbo/pull/54) delivered it after 276
+browser CI cases, preview and production checks. The current local #53 work
+compares empty/short/long editor scrollbars with independently measured
+reference cells and pointer behavior. It does not close the complete desktop
+or native shortcut gates.
 
 ## Native Chrome spot checks, 29 October 2026
 
@@ -99,4 +102,5 @@ The broader [implementation status](implementation-status.md) tracks later-phase
 features and launch gates. The automated 0.1.0 release PR remains an unpublished
 draft; completing Phase 0 does not itself authorize publishing a release.
 The [Phase 1 checklist](phase-one-status.md) records the next MVP stage and the
-current local error-navigation hardening without marking Phase 0 complete.
+verified student journey and current local scrollbar work without marking
+Phase 0 complete.

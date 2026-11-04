@@ -47,6 +47,11 @@ activation failure; discovering an update alone must not reload the page.
 On 29 October the owner requested additional cursor shapes, including a vertical
 or I-shaped caret. The optional Editor preference retains underline as the
 factory default and the block cursor as the overwrite-mode indicator.
+On 3 November the owner retained PyTurbo's line-end caret clamping after the
+reference showed virtual-column editing that pads source with spaces. Scrollbar
+viewports may move beyond short lines; clicking blank space still clamps to the
+existing line end. Matching the original padding behavior requires a later
+owner decision.
 
 ## Available dependency pins
 
@@ -79,8 +84,9 @@ The owner also approved `issues: write` for the release workflow's labeling need
 ## Reference questions still open
 
 The twenty IDE color groups and their defaults have now been transcribed from
-private lossless reference captures. Selected-disabled menu color, full golden screens,
-actual browser/OS keyboard capture, and the remaining Ctrl+O F/R implementation still
-need reference evidence. See [fidelity status](fidelity-status.md) and
+private lossless reference captures. Selected-disabled menu colors and the
+Ctrl+O F/R editor options have separate delivery evidence. Full golden screens,
+actual browser/OS keyboard capture and remaining control comparisons still need
+evidence. See [fidelity status](fidelity-status.md) and
 [editor details](editor-and-storage.md). No alternate semantics were silently
 assigned to these unverified commands.

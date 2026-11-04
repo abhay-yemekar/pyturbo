@@ -17,6 +17,16 @@ the position remains visible as you continue editing.
 
 ![PyTurbo's editor at line 10, column 13, with an unsaved-change marker](../images/manual-editor-indicator.png)
 
+The active editor's bottom and right edges have scroll arrows, a shaded track
+and a square thumb. Click an arrow to move one column/line, click the track to
+move a page, or drag the thumb. Editor scroll controls remain visible when the
+file is empty or short. Horizontal scrolling can show blank space beyond a
+short line; scrolling alone does not insert spaces or move the text caret.
+Typing or caret navigation brings the caret back into view. Clicking beyond a
+line's text clamps to its end; typing there appends without padding spaces.
+
+![PyTurbo's active editor with horizontal and vertical scroll arrows and square thumbs](../images/manual-editor-scrollbars.png)
+
 By default, **Tab** inserts spaces to the next four-column tab stop.
 **Shift+Tab** unindents. Enter copies the line’s indentation and adds a level
 after a colon. Use **Options → Environment → Editor…** to change these options.
