@@ -111,6 +111,28 @@ Choose **File → Share link…**. The link contains compressed project source i
 its URL fragment. Anyone with the link can read that source. Opening a share
 loads source into memory without automatically saving or running it.
 
+A **Temporary shared workspace** notice stays above the editor. Run and Compile
+use the shared project's files without automatically saving them or adding
+unrelated files from your saved workspace. Your saved desktop layout is kept.
+
+![A temporary shared project with its persistent notice](../images/manual-shared-workspace.png)
+
+To keep a shared file, choose **Save** or **Save as…**. If that name already
+exists in browser storage, PyTurbo asks **Overwrite file?**; **Cancel** is
+selected initially. Cancel or Escape preserves the original and keeps the
+shared source open. Save as with a different name keeps both copies. After you
+explicitly save a copy, later Save commands in that session update that copy.
+
+![A shared-file overwrite choice with Cancel selected](../images/manual-shared-overwrite.png)
+
+**Save all** resolves all overwrite choices before writing any shared files.
+Cancelling a choice leaves the temporary project unsaved. Project → Delete item
+removes an item from the temporary project while keeping the saved browser copy.
+Close the shared tab and return to your usual PyTurbo tab for your saved workspace.
+
+Python still uses the app's browser origin. Only run programs and packages you
+trust; a separate execution-origin boundary remains unfinished.
+
 Do not include private data in programs you share. Large projects can exceed
 the share size limit; download their files instead.
 
