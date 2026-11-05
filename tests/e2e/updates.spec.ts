@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import LZString from 'lz-string';
 
 interface UpdateHarness {
   posts: number;
@@ -136,6 +137,65 @@ test('saves every open file and preferences before an explicitly chosen update r
   await expect(editor(page)).toHaveValue('print("first saved")');
   await command(page, 'Preferences…');
   await expect(page.getByLabel('Pause after run', { exact: true })).toBeChecked();
+});
+
+test('preserves a shared draft and saved-file collisions through cancelled and accepted updates', async ({
+  page,
+}) => {
+  await prepare(page);
+  const original = 'print("original saved workspace")';
+  const incoming = 'print("incoming shared code")';
+  const edited = 'print("edited shared draft survives update")';
+  await editor(page).fill(original);
+  await editor(page).press('F2');
+  await expect(page.getByRole('status')).toContainText('saved.');
+  const saved = () =>
+    page.evaluate(
+      () =>
+        new Promise<string>((resolve, reject) => {
+          const request = indexedDB.open('pyturbo');
+          request.onerror = () => reject(request.error);
+          request.onsuccess = () => {
+            const db = request.result;
+            const value = db
+              .transaction('workspace', 'readonly')
+              .objectStore('workspace')
+              .get('file:NONAME00.PY');
+            value.onsuccess = () => {
+              db.close();
+              resolve(value.result.content);
+            };
+            value.onerror = () => reject(value.error);
+          };
+        }),
+    );
+  const hash =
+    '#pyturbo=' +
+    LZString.compressToEncodedURIComponent(
+      JSON.stringify({ version: 1, activeFile: 'NONAME00.PY', files: { 'NONAME00.PY': incoming } }),
+    );
+  await page.goto('about:blank');
+  await page.goto(`/${hash}`);
+  await expect(editor(page)).toHaveValue(incoming);
+  await editor(page).fill(edited);
+  await update(page).click();
+  const overwrite = page.getByRole('dialog', { name: 'Overwrite file?', exact: true });
+  await expect(overwrite).toContainText('NONAME00.PY');
+  await page.keyboard.press('Escape');
+  await expect(notice(page)).toContainText('Update cancelled');
+  expect(await saved()).toBe(original);
+  expect(await page.evaluate(() => window.updateHarness.posts)).toBe(0);
+  await expect(editor(page)).toHaveValue(edited);
+  await update(page).click();
+  await expect(overwrite).toBeAttached();
+  await Promise.all([
+    page.waitForEvent('load'),
+    overwrite.getByRole('button', { name: 'Overwrite', exact: true }).press('Enter'),
+  ]);
+  await expect(editor(page)).toHaveValue(edited);
+  expect(await saved()).toBe(edited);
+  await expect(page.getByRole('region', { name: 'Temporary shared workspace' })).toBeVisible();
+  await expect(notice(page)).toBeHidden();
 });
 
 test('keeps unsaved source open and permits retry when saving an update fails', async ({

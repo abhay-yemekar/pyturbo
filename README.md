@@ -101,6 +101,11 @@ embed source in the URL fragment; anyone with the link can read it. Loading a
 share does not automatically run or save the files. Inspect programs and packages
 before running them; see [security](SECURITY.md).
 
+Shared links open a temporary workspace. Run and Compile keep incoming files
+temporary; use Save or Save as to keep a copy. Replacing an existing saved file
+requires an explicit overwrite choice. The [sharing guide](docs/manual/editing-and-files.md#share-source)
+explains cancellation, separate copies and shared-workspace updates.
+
 Compatible Pyodide packages and pure-Python wheels are supported by the design.
 Desktop-only native libraries, raw sockets, subprocesses, and arbitrary native
 extensions remain outside its browser-only scope. Offline operation requires a

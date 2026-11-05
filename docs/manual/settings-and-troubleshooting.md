@@ -118,6 +118,12 @@ fails or your workspace changes during the update, the editor stays open and
 you can review your work before retrying. Updates never reload the page merely
 because a new version was discovered.
 
+In a temporary shared workspace, Save and reload asks before replacing any
+same-named saved files. Cancel keeps the draft and the current version open.
+Accepting the save choices preserves the edited shared project when the app
+reloads. If the edited project exceeds the share-link size limit, the app stays
+open; download a copy before leaving the shared tab.
+
 ![An available PyTurbo update with the Save and reload action](../images/manual-update.png)
 
 Copies installed before this update action was added need the manual steps

@@ -53,6 +53,13 @@ viewports may move beyond short lines; clicking blank space still clamps to the
 existing line end. Matching the original padding behavior requires a later
 owner decision.
 
+On 5 November the owner approved temporary shared workspaces: Run must not
+automatically save incoming files over existing saved work, and explicit saves
+require an overwrite choice for existing targets. The local implementation also
+keeps the saved desktop layout, scopes supplied project files to the shared
+session, and applies cancellation consistently to Save All, close/quit and
+Save and reload. This does not establish a separate-origin Python sandbox.
+
 ## Available dependency pins
 
 Registry verification confirmed the requested major versions. Direct pins are:

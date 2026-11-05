@@ -150,6 +150,20 @@ the browser, private mode, or the user. Download important files for a separate 
 for an unrelated fragment. The schema is versioned. Loading a share link does not save
 or overwrite IndexedDB files; that is a separate, explicit application operation.
 
+Valid shared links now open a temporary workspace. The application excludes the
+previously saved workspace file set from `projectFiles()` and skips automatic
+saves on Run, including the prefilled-stdin fallback. Desktop layout persistence
+is suppressed for the temporary session. Explicit Save/Save As checks the actual
+stored target and asks before the first replacement; Save All resolves every
+collision before any write. Cancelling a save also cancels dependent close,
+quit and update actions. Temporary Project Delete leaves stored copies intact.
+
+Save and reload requires these save choices and preserves the edited shared
+project in its updated URL fragment before reload. A failed save or a project
+that no longer fits a share URL keeps the page open. Shared-workspace file scoping
+does not prevent Python from using same-origin browser APIs; the execution
+boundary remains a separate open security task.
+
 Share content stays in the URL fragment and is not uploaded to a sharing service. Anyone
 given the link can read it. Validation bounds the fragment to 16,000 characters, project
 source plus filenames to 256,000 UTF-16 code units, and the project to 100 files. Oversized

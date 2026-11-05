@@ -35,6 +35,12 @@ links may be copied into browser history, messages, or other user-controlled
 places. Do not share secrets. The decoder validates schema/paths and limits both
 compressed and expanded content.
 
+Shared projects use a temporary application workspace. Run does not automatically
+save incoming source, and explicit saves ask before replacing an existing saved
+target. This protects the application's save workflow. Python and installed
+packages still have their worker origin's capabilities; these UI safeguards do
+not establish a separate-origin execution boundary.
+
 Live input/debugging require SharedArrayBuffer and COOP/COEP headers. Stop signals
 an interrupt and wakes waits, with worker reset as a fallback. Python and package
 downloads use the configured runtime/package sources. These controls still need

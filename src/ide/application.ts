@@ -82,6 +82,7 @@ interface DialogState {
   selected: number;
   buttons: string[];
   onSubmit: (values: string[], choice: number, selected: number) => void | Promise<void>;
+  onCancel?: () => void;
   width: number;
   fieldIndex: number;
   kind?: 'colors';
@@ -161,6 +162,7 @@ export class Application {
   private readonly statusMirror = document.createElement('div');
   private readonly tools = document.createElement('nav');
   private readonly updateNotice = document.createElement('aside');
+  private readonly sharedNotice = document.createElement('aside');
   private readonly updateMessage = document.createElement('span');
   private readonly updateButton = document.createElement('button');
   private waitingUpdate?: ServiceWorker;
@@ -173,6 +175,8 @@ export class Application {
   private readonly renderer = new CanvasRenderer(this.canvas, this.buffer);
   private settings: WorkspaceSettings = structuredClone(defaultSettings);
   private files: WorkspaceFile[] = [];
+  private sharedWorkspace = false;
+  private readonly sharedSavedNames = new WeakMap<EditorBuffer, string>();
   private windows: IdeWindow[] = [];
   private nextId = 1;
   private menuStack: OpenMenu[] = [];
@@ -265,6 +269,12 @@ export class Application {
     this.updateButton.textContent = 'Save and reload';
     this.updateButton.addEventListener('click', () => void this.applyUpdate());
     this.updateNotice.append(this.updateMessage, this.updateButton);
+    this.sharedNotice.className = 'update-notice';
+    this.sharedNotice.hidden = true;
+    this.sharedNotice.setAttribute('role', 'region');
+    this.sharedNotice.setAttribute('aria-label', 'Temporary shared workspace');
+    this.sharedNotice.textContent =
+      'Shared files are temporary. Run and Compile do not save them. Use Save or Save as to keep a copy. Only run code you trust.';
     for (const [label, command] of [
       ['Run', 'run'],
       ['Stop', 'stop'],
@@ -318,6 +328,7 @@ export class Application {
     this.stage.append(this.canvas, this.input);
     this.root.append(
       this.updateNotice,
+      this.sharedNotice,
       this.stage,
       this.tools,
       this.mirror,
@@ -439,6 +450,10 @@ export class Application {
       try {
         const shared = decodeShare(location.hash);
         if (shared) {
+          this.sharedWorkspace = true;
+          this.sharedNotice.hidden = false;
+          // Incoming projects must not inherit the saved workspace's file set.
+          this.files = [];
           for (const [name, content] of Object.entries(shared.files))
             this.openEditor(name, content, true);
           const active = this.windows.find(
@@ -575,11 +590,21 @@ export class Application {
     this.updateError = '';
     this.syncUpdateNotice();
     try {
-      await this.saveAll();
+      const sharedFiles = this.sharedWorkspace ? this.fileMap() : undefined;
+      const sharedHash =
+        sharedFiles && Object.keys(sharedFiles).length
+          ? encodeShare(sharedFiles, this.editor?.filename ?? Object.keys(sharedFiles)[0])
+          : undefined;
+      if (!(await this.saveAll())) {
+        this.updateError = 'Update cancelled. Your shared files remain open.';
+        return;
+      }
       await this.store.saveSettings(this.settings);
       if (!unchanged()) throw new Error('Your workspace changed. Review your edits and try again.');
       await activateAppUpdate(worker);
       if (!unchanged()) throw new Error('Your workspace changed. Review your edits and try again.');
+      if (sharedHash)
+        history.replaceState(null, '', `${location.pathname}${location.search}${sharedHash}`);
       location.reload();
     } catch (error) {
       this.updateError = `Could not reload: ${String(error)} Your editor remains open.`;
@@ -613,7 +638,10 @@ export class Application {
 
   private fit(): void {
     const mobile = matchMedia('(pointer: coarse), (max-width: 760px)').matches;
-    const noticeHeight = this.updateNotice.hidden ? 0 : this.updateNotice.offsetHeight + 10;
+    const noticeHeight = [this.updateNotice, this.sharedNotice].reduce(
+      (height, notice) => height + (notice.hidden ? 0 : notice.offsetHeight + 10),
+      0,
+    );
     const height = Math.max(
       160,
       window.innerHeight - noticeHeight - (mobile ? this.tools.offsetHeight + 10 : 0),
@@ -1316,8 +1344,10 @@ export class Application {
       width?: number;
       kind?: 'colors';
       colors?: Record<string, number>;
+      onCancel?: () => void;
     } = {},
   ): void {
+    this.dialog?.onCancel?.();
     this.showDesktop();
     this.menuStack = [];
     this.menuFocused = false;
@@ -1326,6 +1356,7 @@ export class Application {
       message,
       fields,
       onSubmit,
+      onCancel: options.onCancel,
       list: options.list,
       selected: 0,
       buttons: options.buttons ?? ['OK', 'Cancel'],
@@ -1640,11 +1671,13 @@ export class Application {
     }
   }
 
-  private dismissDialog(): void {
+  private dismissDialog(cancelled = true): void {
+    const dialog = this.dialog;
     this.dialog = undefined;
     this.dialogMirror.replaceChildren();
     this.setModalState(false);
     this.dirty = true;
+    if (cancelled) dialog?.onCancel?.();
   }
 
   private restoreDialogFocus(): void {
@@ -1690,8 +1723,9 @@ export class Application {
       previousTab = editor?.tabOffset;
       previousText = editor?.text;
     };
-    this.dismissDialog();
-    if (!['Cancel', 'Close'].includes(dialog.buttons[choice])) {
+    const cancelled = ['Cancel', 'Close'].includes(dialog.buttons[choice]);
+    this.dismissDialog(cancelled);
+    if (!cancelled) {
       try {
         const completion = dialog.onSubmit(
           dialog.fields.map((field) => field.value),
@@ -1928,6 +1962,10 @@ export class Application {
                 throw new Error(
                   `${name} is already open in another editor. Choose another name or close that editor first.`,
                 );
+              if (this.sharedWorkspace) {
+                await this.saveEditor(editor, name);
+                return;
+              }
               const exists = this.files.some(
                 (file) => file.name === name && name !== editor.filename,
               );
@@ -1994,7 +2032,7 @@ export class Application {
             ['Save changes before quitting?'],
             [],
             async (_values, choice) => {
-              if (choice === 0) await this.saveAll();
+              if (choice === 0 && !(await this.saveAll())) return;
               this.quit = true;
             },
             { buttons: ['Save', 'Discard', 'Cancel'] },
@@ -2479,12 +2517,16 @@ export class Application {
           this.openDialog(
             'Delete Project Item',
             [
-              `Remove ${editor.filename} from browser storage?`,
-              'Download a copy first if you need to keep it.',
+              this.sharedWorkspace
+                ? `Remove ${editor.filename} from the temporary workspace?`
+                : `Remove ${editor.filename} from browser storage?`,
+              this.sharedWorkspace
+                ? 'Saved files in your browser will not be deleted.'
+                : 'Download a copy first if you need to keep it.',
             ],
             [],
             async () => {
-              await this.store.deleteFile(editor.filename);
+              if (!this.sharedWorkspace) await this.store.deleteFile(editor.filename);
               this.files = this.files.filter((file) => file.name !== editor.filename);
               this.windows = this.windows.filter((window) => window.editor !== editor);
             },
@@ -2580,13 +2622,45 @@ export class Application {
   private fileMap(): Record<string, string> {
     return Object.fromEntries(this.projectFiles().map((file) => [file.name, file.content]));
   }
-  private async saveEditor(editor: EditorBuffer, filename?: string): Promise<void> {
+  private async approveSharedSave(editor: EditorBuffer, name: string): Promise<boolean> {
+    if (
+      this.sharedWorkspace &&
+      this.sharedSavedNames.get(editor) !== name &&
+      (await this.store.loadFile(name))
+    ) {
+      const width = Math.min(72, this.buffer.cols - 4);
+      const characters = Array.from(name);
+      const message: string[] = [];
+      for (let offset = 0; offset < characters.length; offset += width - 6)
+        message.push(characters.slice(offset, offset + width - 6).join(''));
+      if (message.length < this.buffer.rows - 7) message.push('Replace with this shared file?');
+      const overwrite = await new Promise<boolean>((resolve) => {
+        this.openDialog('Overwrite file?', message, [], () => resolve(true), {
+          width,
+          buttons: ['Overwrite', 'Cancel'],
+          onCancel: () => resolve(false),
+        });
+        this.dialogMirror.querySelectorAll<HTMLButtonElement>('button').item(1)?.focus();
+      });
+      if (!overwrite) {
+        this.announce('Save cancelled. Your shared file remains temporary.');
+        return false;
+      }
+    }
+    return true;
+  }
+  private async saveEditor(
+    editor: EditorBuffer,
+    filename?: string,
+    approved = false,
+  ): Promise<boolean> {
     const version = ++this.saveSequence;
     const file: WorkspaceFile = {
       name: validateFilename(filename ?? editor.filename),
       content: editor.text,
       updatedAt: Date.now(),
     };
+    if (!approved && !(await this.approveSharedSave(editor, file.name))) return false;
     await this.store.saveFile(file);
     if (version > (this.fileSaveVersions.get(file.name) ?? 0)) {
       this.fileSaveVersions.set(file.name, version);
@@ -2605,15 +2679,31 @@ export class Application {
     ) {
       editor.markSaved(file.content);
     }
+    if (this.sharedWorkspace && editor.filename === file.name)
+      this.sharedSavedNames.set(editor, file.name);
     this.persistDesktop();
     this.announce(
       editor.modified ? `${file.name} saved; newer edits are unsaved.` : `${file.name} saved.`,
     );
+    return true;
   }
-  private async saveAll(): Promise<void> {
-    for (const window of this.windows) if (window.editor) await this.saveEditor(window.editor);
+  private async saveAll(): Promise<boolean> {
+    const editors = this.windows.flatMap((window) =>
+      window.editor ? [{ editor: window.editor, name: window.editor.filename }] : [],
+    );
+    // Resolve every collision before the first write, so Cancel cannot partly
+    // persist a temporary project through Save All or Save and reload.
+    if (this.sharedWorkspace) {
+      for (const { editor, name } of editors)
+        if (!(await this.approveSharedSave(editor, name))) return false;
+      if (editors.some(({ editor, name }) => editor.filename !== name)) return false;
+    }
+    for (const { editor } of editors)
+      if (!(await this.saveEditor(editor, undefined, this.sharedWorkspace))) return false;
+    return true;
   }
   private persistDesktop(): void {
+    if (this.sharedWorkspace) return;
     this.settings.desktop = this.windows.flatMap((window) =>
       window.editor ? [{ filename: window.editor.filename, ...window.bounds }] : [],
     );
@@ -2695,7 +2785,7 @@ export class Application {
         [`Save changes to ${window.editor.filename}?`],
         [],
         async (_values, choice) => {
-          if (choice === 0 && window.editor) await this.saveEditor(window.editor);
+          if (choice === 0 && window.editor && !(await this.saveEditor(window.editor))) return;
           close();
         },
         { buttons: ['Save', 'Discard', 'Cancel'] },
@@ -2714,7 +2804,7 @@ export class Application {
         ['Save changes to all modified files?'],
         [],
         async (_values, choice) => {
-          if (choice === 0) await this.saveAll();
+          if (choice === 0 && !(await this.saveAll())) return;
           close();
         },
         { buttons: ['Save', 'Discard', 'Cancel'] },
@@ -2933,7 +3023,7 @@ export class Application {
         ],
         [{ label: 'Program input', value: '' }],
         async ([input]) => {
-          await this.saveAll();
+          if (!this.sharedWorkspace) await this.saveAll();
           this.beginRun(request, input.replaceAll('|', '\n'));
         },
       );
@@ -2942,7 +3032,7 @@ export class Application {
     this.pendingRun = request;
     this.compileRequested = false;
     try {
-      await this.saveAll();
+      if (!this.sharedWorkspace) await this.saveAll();
       if (this.pendingRun === request) this.runtime.compile(request.files, request.filename);
     } catch (error) {
       if (this.pendingRun === request) this.pendingRun = undefined;
